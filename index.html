@@ -1110,6 +1110,19 @@ const WEATHER = {
   "Harare Sports Club": 0.08, "Queens Sports Club, Bulawayo": 0.06,
   "Shere Bangla Stadium, Mirpur": 0.15, "Zahur Ahmed Chowdhury Stadium, Chattogram": 0.18,
 };
+// Draws follow history: Tests in the 1960s to 80s (slow over rates, flat pitches) were drawn far more often than today,
+// and some countries (Pakistan, India, New Zealand) have always drawn more at home than others (Australia, Bangladesh).
+// Each country and decade gets a playing-time factor, calibrated by simulation so the draw rate lands near the real one.
+const MATCH_TIME = {"AUS":{"0":0.94,"1":1.02,"2":0.99,"5":1.02,"6":0.95,"7":0.99,"8":0.96,"9":0.94,"P":1.09},"ENG":{"0":0.99,"1":1.03,"2":1.08,"5":1.11,"6":1,"7":1.05,"8":0.93,"9":0.96,"P":1.11},"IND":{"0":0.95,"1":0.91,"2":0.9,"6":0.91,"7":0.9,"8":0.88,"9":0.95},"PAK":{"0":0.89,"1":0.98,"6":0.89,"7":0.9,"8":0.83,"9":0.87},"SA":{"0":0.91,"1":0.91,"2":0.95,"5":1.01,"6":0.9,"9":0.88},"WI":{"0":0.98,"1":0.98,"5":1.08,"6":0.99,"7":0.85,"8":0.87,"9":0.89},"NZ":{"0":0.99,"1":0.98,"9":0.88},"SL":{"0":0.98,"1":0.98,"2":1.07,"9":0.93}};
+function matchTime(cc, era) {
+  if (typeof window !== "undefined" && window.__timeOverride != null) return window.__timeOverride;
+  const row = MATCH_TIME[cc] || {};
+  if (row[era]) return row[era];
+  // No calibration for this pairing: use the country's nearest decade.
+  const i = ERA_ORDER.indexOf(era);
+  for (let k = 1; k < ERA_ORDER.length; k++) for (const j of [i - k, i + k]) if (row[ERA_ORDER[j]]) return row[ERA_ORDER[j]];
+  return 1;
+}
 function weatherFor(R, venue) {
   const p = WEATHER[venue] ?? 0.12;
   const days = [1, 2, 3, 4, 5].map(() => {
@@ -1336,7 +1349,7 @@ function playTest(R, mine, opp, venue) {
   const cond = CONDITIONS[opp.cc];
   const T = { us: mine, them: opp.xi };
   const weather = weatherFor(R, venue);
-  let oversLeft = 450 - weather.lost;
+  let oversLeft = Math.round(450 * matchTime(opp.cc, opp.era)) - weather.lost;
   const inns = [];
   const go = (side, opts) => {
     const inn = innings(R, T[side], T[side === "us" ? "them" : "us"], cond, side === "them", { ...opts, oversLeft, innNo: inns.length + 1, venue, cc: opp.cc });
