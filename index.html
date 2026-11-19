@@ -114,6 +114,23 @@ h1 span { color: var(--gold); }
 .cardbox img { display: block; width: 100%; height: auto; max-height: 68vh; object-fit: contain; border-radius: 4px; }
 .cardhint { color: var(--dim); margin: 10px 0; font-size: 14px; }
 a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.lbwrap { margin: 16px 0 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.lbform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 12px; }
+.lbform label { color: var(--dim); font-size: 14px; width: 100%; }
+.lbform input { flex: 1 1 160px; min-width: 0; font: 600 16px var(--body); color: var(--chalk); background: var(--plate);
+  border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; }
+.lbform input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.lbmsg { color: var(--dim); font-size: 14px; width: 100%; }
+.lbnote { color: var(--dim); margin: 6px 0; }
+.lbnote a { color: var(--gold); }
+.lb { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; }
+.lb li { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto 3.4em; gap: 10px; align-items: baseline;
+  padding: 7px 8px; border-bottom: 1px solid rgba(43, 82, 57, 0.6); font-variant-numeric: tabular-nums; }
+.lb li.me { background: rgba(244, 197, 66, 0.12); }
+.lb .rk { font: 800 18px var(--display); color: var(--gold); }
+.lb .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lb .wdl { font: 800 18px var(--display); letter-spacing: 0.04em; }
+.lb .rt { color: var(--dim); text-align: right; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
@@ -1644,6 +1661,7 @@ function renderResults() {
       <p class="verdict">${text}</p>
       ${S.mode === "daily" ? `<p class="emojis" aria-label="${r.wins} won, ${r.draws} drawn, ${r.losses} lost">${emojiRow(r)}</p>
       <p class="dailyline">That's your one go at Daily #${S.day}. Share it, then try a free draft. Next daily in <b>${untilTomorrow()}</b>.</p>` : ""}
+      ${boardSection(r)}
       <div class="bars">${bar("Batting", r.batting)}${bar("Bowling", r.bowling)}</div>
       <textarea class="share" id="shareBox" readonly aria-label="Your result to share">${esc(share)}</textarea>
       <div class="actions">
@@ -1658,10 +1676,79 @@ function renderResults() {
   if ($("replay")) $("replay").onclick = () => { if ((S.tour || 0) >= MAX_REPLAYS) return; S.tour = (S.tour || 0) + 1; render(); };
   renderTour(r);
   $("card").onclick = () => openCard(r);
+  wireBoard(r);
   $("copy").onclick = () => {
     const show = () => { $("copied").hidden = false; };
     const fallback = () => { const b = $("shareBox"); b.focus(); b.select(); $("copied").textContent = "Selected, press copy"; show(); };
     try { navigator.clipboard.writeText(share).then(show, fallback); } catch (e) { fallback(); }
+  };
+}
+
+// ---------- daily leaderboard ----------
+// Scores live in the project's Supabase table `daily_scores`. The publishable key is meant to sit in a public page;
+// row-level security on the table only lets anyone read scores and add one per player per day.
+const SB = { url: "https://scdoshhzpdopjhgejdpx.supabase.co", key: "sb_publishable_DpwWt197zPAtq49VZr9bNQ_TPXzXQwV" };
+const LB_ON = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(SB.url);
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+function playerId() {
+  let id = lsGet("txi-player");
+  if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); lsSet("txi-player", id); }
+  return id;
+}
+async function sb(path, opts = {}) {
+  const res = await fetch(`${SB.url}/rest/v1/${path}`, { ...opts, headers: { apikey: SB.key, "Content-Type": "application/json", ...(opts.headers || {}) } });
+  if (!res.ok) { const e = new Error("sb " + res.status); e.status = res.status; throw e; }
+  return res.status === 204 || res.status === 201 ? null : res.json();
+}
+const LB = {}; // day -> { rows, error, loading }
+async function loadBoard(day) {
+  LB[day] = { ...(LB[day] || {}), loading: true };
+  try {
+    const rows = await sb(`daily_scores?day=eq.${day}&select=name,wins,draws,losses,rating,player_id&order=wins.desc,draws.desc,rating.desc,created_at.asc&limit=100`);
+    LB[day] = { ...LB[day], rows, loading: false, error: false };
+  } catch (e) { LB[day] = { ...LB[day], error: true, loading: false }; }
+  paintBoard(day);
+}
+async function postScore(day, r, name) {
+  const body = { day, player_id: playerId(), name, wins: r.wins, draws: r.draws, losses: r.losses, rating: Math.round(r.rating * 10) / 10 };
+  try {
+    await sb("daily_scores", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(body) });
+  } catch (e) { if (e.status !== 409) throw e; } // 409: already posted today
+  lsSet("txi-posted-" + day, "1");
+}
+function boardHtml(day) {
+  const st = LB[day];
+  if (!st || st.loading && !st.rows) return `<p class="lbnote">Loading today's leaderboard…</p>`;
+  if (st.error) return `<p class="lbnote">The leaderboard couldn't load here. It works on the website: <a href="${PLAY_URL}" target="_blank" rel="noopener">${PLAY_URL.replace(/^https:\/\//, "")}</a></p>`;
+  if (!st.rows.length) return `<p class="lbnote">Nobody's posted yet. Be first.</p>`;
+  const me = playerId();
+  return `<ol class="lb">${st.rows.map((x, i) => `<li class="${x.player_id === me ? "me" : ""}"><span class="rk">${i + 1}</span><span class="nm">${esc(x.name)}${x.player_id === me ? " (you)" : ""}</span><span class="wdl">${x.wins}-${x.draws}-${x.losses}</span><span class="rt">${(+x.rating).toFixed(1)}</span></li>`).join("")}</ol>`;
+}
+function paintBoard(day) { const el = $("lbList"); if (el && S.mode === "daily" && S.day === day) el.innerHTML = boardHtml(day); }
+function boardSection(r) {
+  if (!LB_ON || S.mode !== "daily") return "";
+  const posted = lsGet("txi-posted-" + S.day);
+  const saved = lsGet("txi-name") || "";
+  return `<div class="lbwrap"><p class="eyebrow">Daily #${S.day} leaderboard · most wins, then draws, then rating</p>
+    ${posted ? "" : `<form class="lbform" id="lbForm"><label for="lbName">Your name</label>
+      <input id="lbName" maxlength="20" autocomplete="nickname" value="${esc(saved)}" placeholder="e.g. Jarrod" required>
+      <button class="btn solid" type="submit">Post my score</button><span class="lbmsg" id="lbMsg" role="status"></span></form>`}
+    <div id="lbList">${boardHtml(S.day)}</div></div>`;
+}
+function wireBoard(r) {
+  if (!LB_ON || S.mode !== "daily") return;
+  const day = S.day;
+  if (!LB[day] || Date.now() - (LB[day].at || 0) > 30000) { LB[day] = { ...(LB[day] || {}), at: Date.now() }; loadBoard(day); }
+  const f = $("lbForm"); if (!f) return;
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const name = $("lbName").value.trim().replace(/\s+/g, " ").slice(0, 20);
+    if (!name) return;
+    lsSet("txi-name", name);
+    const btn = f.querySelector("button"); btn.disabled = true; $("lbMsg").textContent = "Posting…";
+    try { await postScore(day, r, name); f.remove(); await loadBoard(day); }
+    catch (err) { btn.disabled = false; $("lbMsg").textContent = "Couldn't post. Check your connection and try again."; }
   };
 }
 
