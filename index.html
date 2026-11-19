@@ -1,0 +1,1641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#123522">
+<meta name="description" content="Draft an all-time Test XI one country and decade at a time, then take them on an 11-Test tour.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="11-0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>11-0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
+/* Layout: an old hand-operated ground scoreboard. Left: the draw (country + decade tin plates, then that era's players). Right: the team sheet, batting order 1 to 11. */
+:root {
+  --board: #0f2a1c;
+  --board-2: #163824;
+  --plate: #081a10;
+  --line: #2b5239;
+  --chalk: #f0eee2;
+  --dim: #97b09f;
+  --gold: #f4c542;
+  --ball: #d2443a;
+  --good: #7fd18b;
+  --display: "Big Shoulders Display", "Oswald", "Arial Narrow", Impact, sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: #0f2c1d; color: var(--chalk); }
+body { color: var(--chalk); margin: 0; }
+body {
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.45;
+  min-height: 100%;
+  background:
+    /* mown outfield: alternating light and dark stripes */
+    repeating-linear-gradient(180deg, #123522 0 90px, #0f2c1d 90px 180px);
+  background-attachment: fixed;
+  position: relative;
+}
+/* The ground behind everything: boundary rope, 30-yard circle and the pitch with its creases */
+.ground { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.ground .rope { position: absolute; left: 50%; top: 50%; width: 150vmax; height: 110vmax; transform: translate(-50%, -50%);
+  border-radius: 50%; border: 3px solid rgba(240, 238, 226, 0.10); box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.12); }
+.ground .ring { position: absolute; left: 50%; top: 50%; width: 70vmax; height: 52vmax; transform: translate(-50%, -50%);
+  border-radius: 50%; border: 2px dashed rgba(240, 238, 226, 0.08); }
+.ground .pitch { position: absolute; left: 50%; top: 50%; width: min(150px, 22vw); height: 78vh; transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, rgba(196, 170, 112, 0.16), rgba(176, 150, 96, 0.20) 50%, rgba(196, 170, 112, 0.16));
+  border-radius: 2px; }
+.ground .pitch::before, .ground .pitch::after { content: ""; position: absolute; left: -18%; right: -18%; height: 0;
+  border-top: 2px solid rgba(240, 238, 226, 0.22); }
+.ground .pitch::before { top: 8%; }
+.ground .pitch::after { bottom: 8%; }
+.ground .stumps { position: absolute; left: 50%; width: 22px; height: 6px; transform: translateX(-50%);
+  background: repeating-linear-gradient(90deg, rgba(240, 238, 226, 0.35) 0 4px, transparent 4px 9px); }
+.ground .stumps.top { top: calc(50% - 39vh + 3vh); }
+.ground .stumps.bottom { top: calc(50% + 39vh - 3vh - 6px); }
+.wrap, .ground ~ * { position: relative; z-index: 1; }
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.top {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px;
+  border-bottom: 2px solid var(--line); padding-bottom: 14px; margin-bottom: 20px;
+}
+.brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+h1 {
+  font-family: var(--display); font-weight: 900; font-size: clamp(40px, 7vw, 64px);
+  line-height: 0.9; margin: 0; letter-spacing: 0.01em; text-transform: uppercase;
+}
+h1 span { color: var(--gold); }
+.tag { color: var(--dim); max-width: 46ch; margin: 0; }
+.meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pill {
+  font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--plate); border: 1px solid var(--line); padding: 6px 12px; border-radius: 3px; color: var(--dim);
+}
+.pill b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: rgba(22, 56, 36, 0.9); backdrop-filter: blur(2px); border: 1px solid var(--line); border-radius: 4px; padding: 18px; min-width: 0; }
+.eyebrow {
+  font-family: var(--display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em;
+  font-size: 13px; color: var(--dim); margin: 0 0 10px;
+}
+
+/* draw plates */
+.plates { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+.plate {
+  background: var(--plate); border: 2px solid #000; box-shadow: inset 0 0 0 1px var(--line);
+  border-radius: 3px; padding: 10px 14px 12px; min-width: 0; position: relative; overflow: hidden;
+}
+.plate small { display: block; font-family: var(--display); font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); font-size: 12px; }
+.plate .big {
+  font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(30px, 5vw, 44px);
+  line-height: 1; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+}
+.plate .stripe { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
+.plate.rolling .big { color: var(--chalk); opacity: 0.7; }
+.drawbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 14px 0 6px; }
+.hint { color: var(--dim); margin: 0; font-size: 14px; }
+
+button { font: inherit; cursor: pointer; }
+.btn {
+  font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: 0.08em; text-transform: uppercase;
+  border: 2px solid var(--gold); background: transparent; color: var(--gold); padding: 7px 14px; border-radius: 3px;
+}
+.btn:hover:not(:disabled) { background: var(--gold); color: var(--plate); }
+.btn.solid { background: var(--gold); color: var(--plate); }
+.btn.solid:hover { background: var(--chalk); border-color: var(--chalk); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+button:focus-visible, .row:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* player list */
+.list { display: grid; gap: 6px; margin-top: 12px; }
+.row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center;
+  background: var(--plate); border: 1px solid var(--line); border-radius: 3px; padding: 10px 12px; text-align: left; color: var(--chalk); width: 100%;
+}
+.row:hover:not(.off) { border-color: var(--gold); }
+.row.sel { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
+.row.off { opacity: 0.45; cursor: default; }
+.pname { font-weight: 700; font-size: 16px; min-width: 0; }
+.stats { grid-column: 1 / -1; color: var(--dim); font-size: 13.5px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.stats b { color: var(--chalk); font-weight: 600; }
+.role {
+  font-family: var(--display); font-weight: 800; font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap;
+}
+.role.r-OPN, .role.r-BAT { color: #a9d4ff; border-color: #35597a; }
+.role.r-WK { color: #ffd29a; border-color: #7a5a35; }
+.role.r-ARP, .role.r-ARS { color: #d9b8ff; border-color: #5e4580; }
+.role.r-PACE, .role.r-SPIN { color: #ffa99f; border-color: #7d3a35; }
+.slotpick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+.slotpick button {
+  font-family: var(--body); font-weight: 600; font-size: 13.5px; background: var(--board-2); color: var(--chalk);
+  border: 1px solid var(--gold); border-radius: 3px; padding: 5px 10px;
+}
+.slotpick button:hover { background: var(--gold); color: var(--plate); }
+.slotpick button em { font-style: normal; color: var(--dim); font-weight: 500; }
+.slotpick button:hover em { color: var(--plate); }
+
+/* team sheet */
+.sheet { display: grid; gap: 4px; }
+.slot {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 6px 8px 6px 6px; border-radius: 3px; border: 1px solid transparent; min-height: 54px;
+}
+.slot.target { border-color: var(--gold); background: rgba(244, 197, 66, 0.07); }
+.slot .no {
+  font-family: var(--display); font-weight: 900; font-size: 26px; text-align: center; background: var(--plate);
+  border: 2px solid #000; box-shadow: inset 0 0 0 1px var(--line); border-radius: 2px; line-height: 40px; height: 44px; color: var(--chalk);
+  font-variant-numeric: tabular-nums;
+}
+.slot .who { min-width: 0; }
+.slot .pos { font-family: var(--display); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); font-size: 12px; display: block; }
+.slot .nm { font-weight: 700; font-size: 16px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot .nm.empty { color: var(--line); font-weight: 600; }
+.slot .from { color: var(--dim); font-size: 13px; }
+.slot .from .oop { color: var(--ball); }
+.slot .rt {
+  font-family: var(--display); font-weight: 900; font-size: 26px; color: var(--gold); font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right;
+}
+.slot .rt.hid { color: var(--line); }
+
+.needs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.need { font-size: 13px; color: var(--dim); background: var(--plate); border: 1px solid var(--line); border-radius: 3px; padding: 3px 8px; }
+.need b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+.need.full { border-color: var(--good); }
+.need.full b { color: var(--good); }
+.rolepick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-top: 8px; font-size: 13px; color: var(--dim); }
+.rolepick button { font: 600 13px var(--body); background: transparent; color: var(--dim); border: 1px solid var(--line); border-radius: 3px; padding: 4px 10px; }
+.rolepick button[aria-pressed="true"] { color: var(--plate); background: var(--chalk); border-color: var(--chalk); }
+.stats .why { color: var(--ball); }
+
+.tour { margin-top: 24px; }
+.tour h2 { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: 28px; margin: 0 0 4px; }
+.tour .sub { color: var(--dim); margin: 0 0 14px; max-width: 75ch; }
+.match { border: 1px solid var(--line); border-radius: 3px; background: var(--plate); }
+.match + .match { margin-top: 6px; }
+.match summary { cursor: pointer; list-style: none; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 12px; }
+.match summary::-webkit-details-marker { display: none; }
+.match summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.match .tno { font-family: var(--display); font-weight: 800; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.match .vs { min-width: 0; }
+.match .vs b { font-size: 16px; display: block; }
+.match .vs span { color: var(--dim); font-size: 13.5px; }
+.res { font-family: var(--display); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-size: 14px; padding: 3px 9px; border-radius: 2px; border: 1px solid; }
+.res.W { color: var(--good); border-color: var(--good); }
+.res.L { color: var(--ball); border-color: var(--ball); }
+.res.D { color: var(--dim); border-color: var(--line); }
+.match[open] summary { border-bottom: 1px solid var(--line); }
+.mbody { padding: 12px; display: grid; gap: 18px; }
+.mresult { margin: 0; font-weight: 600; }
+.squad { margin: 0; color: var(--dim); font-size: 13.5px; }
+.inn h3 { font-family: var(--display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; font-size: 17px; margin: 0 0 6px; }
+.inn h3 span { color: var(--gold); }
+.inngrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 760px) { .inngrid { grid-template-columns: minmax(0, 1fr); } }
+.tscroll { overflow-x: auto; min-width: 0; }
+table.sc { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+table.sc th { text-align: left; font-weight: 600; color: var(--dim); border-bottom: 1px solid var(--line); padding: 3px 6px; font-size: 12.5px; }
+table.sc td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+table.sc td.how { color: var(--dim); white-space: normal; }
+table.sc .n { text-align: right; }
+table.sc tr.tot td { font-weight: 700; border-bottom: 0; }
+table.sc tr.ex td { color: var(--dim); }
+.dnb { color: var(--dim); font-size: 13px; margin: 6px 0 0; }
+
+/* results */
+.result { display: grid; gap: 16px; }
+.score { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.score .num { font-family: var(--display); font-weight: 900; font-size: clamp(72px, 14vw, 112px); line-height: 0.85; color: var(--gold); font-variant-numeric: tabular-nums; }
+.score .lbl { font-family: var(--display); font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.score h2 { font-family: var(--display); font-weight: 900; font-size: 30px; text-transform: uppercase; margin: 2px 0 0; line-height: 1; text-wrap: balance; }
+.record { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.record .plate { text-align: center; }
+.record .plate .big { color: var(--chalk); font-size: 48px; }
+.record .w .big { color: var(--good); }
+.record .l .big { color: var(--ball); }
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 92px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-variant-numeric: tabular-nums; }
+.bar .lbl2 { font-family: var(--display); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); font-size: 13px; }
+.bar .track { height: 10px; background: var(--plate); border-radius: 2px; overflow: hidden; border: 1px solid var(--line); }
+.bar .fill { height: 100%; background: var(--gold); }
+.bar .v { text-align: right; font-weight: 700; }
+.verdict { margin: 0; color: var(--chalk); max-width: 60ch; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.copied { color: var(--good); font-size: 14px; align-self: center; }
+textarea.share { width: 100%; min-height: 120px; background: var(--plate); color: var(--chalk); border: 1px solid var(--line); border-radius: 3px; padding: 10px; font: 13px/1.4 ui-monospace, Menlo, monospace; }
+
+.rules { margin-top: 24px; color: var(--dim); font-size: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 24px; }
+.rules h3 { font-family: var(--display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--chalk); font-size: 15px; margin: 0 0 4px; }
+.rules p { margin: 0; max-width: 60ch; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .slot.fresh { animation: drop 420ms ease-out; }
+  @keyframes drop { from { background: rgba(244,197,66,0.35); } to { background: transparent; } }
+}
+</style>
+</head>
+<body>
+
+<div class="ground" aria-hidden="true"><div class="rope"></div><div class="ring"></div><div class="pitch"></div><div class="stumps top"></div><div class="stumps bottom"></div></div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>11<span>-0</span></h1>
+      <p class="tag">Every draw hands you a country and a decade. Pick one player from it, fill the batting order, and see if your all-time Test side can go 11 and 0.</p>
+    </div>
+    <div class="meta">
+      <span class="pill">Picks <b id="pickCount">0/11</b></span>
+      <span class="pill">Redraws <b id="rerollCount">3</b></span>
+      <span class="pill">Best <b id="best">–</b></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel" id="left" aria-live="polite"></section>
+    <section class="panel">
+      <p class="eyebrow">Team sheet · batting order</p>
+      <div class="needs" id="needs"></div>
+      <div class="sheet" id="sheet"></div>
+    </section>
+  </div>
+
+  <section class="panel tour" id="tour" hidden></section>
+
+  <div class="rules">
+    <div><h3>How it works</h3><p>Each draw is a country and a decade that has at least one player who fits a gap in your side. Choose a player, then choose where he bats. Batters and keepers can only bat in a position where they played at least 40% of their Test innings (No. 1 and No. 2 count together as opening). All-rounders can bat anywhere, and bowlers bat from No. 8 to 11. Once your XI is complete, the bowlers are sorted into batting order by career batting average. Ratings stay hidden until the XI is complete, so judge on the career numbers.</p></div>
+    <div><h3>Building the side</h3><p>Six batters, a wicketkeeper, an all-rounder and three bowlers of any type. Extra all-rounders can fill batting spots. If you pick a batter, you choose where in the order he goes, within his usual positions. Your finished XI then plays an 11-Test series away from home, each against a different country and decade, simulated from the players' career numbers.</p></div>
+    <div><h3>The numbers</h3><p>Career Test averages, wickets, strike rates and batting positions come from ESPNcricinfo Statsguru, current to November 2026. Balls faced weren't recorded for most Tests before the mid-1970s, so batting strike rates for many older players are estimates. A player appears under each decade he played a meaningful part of his career in. Ratings and bowling styles are our own judgment.</p></div>
+  </div>
+</div>
+
+<script>
+// Name|Country|Eras|Role|BatAvg|BowlAvg|Wkts|Rating|Positions (batters and keepers only; O = opening, 1 or 2)
+// Eras: P=pre-1950, 5=1950s, 6=1960s, 7=1970s, 8=1980s, 9=1990s, 0=2000s, 1=2010s, 2=2020s
+const DATA = `
+Don Bradman|AUS|P|BAT|99.94|36|2|99|3
+Bill Ponsford|AUS|P|OPN|48.23|-|0|80|O
+Victor Trumper|AUS|P|OPN|39.05|39.62|8|81|O
+Stan McCabe|AUS|P|BAT|48.21|42.86|36|79|5
+Bert Oldfield|AUS|P|WK|22.65|-|0|76|8
+Bill O'Reilly|AUS|P|SPIN|12.81|22.59|144|92
+Clarrie Grimmett|AUS|P|SPIN|13.93|24.21|216|89
+Ray Lindwall|AUS|P5|PACE|21.15|23.03|228|88
+Keith Miller|AUS|P5|ARP|36.98|22.97|170|91
+Arthur Morris|AUS|P5|OPN|46.49|25|2|84|O
+Neil Harvey|AUS|56|BAT|48.42|40|3|86|3
+Richie Benaud|AUS|56|ARS|24.46|27.03|248|84
+Alan Davidson|AUS|56|ARP|24.59|20.53|186|87
+Wally Grout|AUS|56|WK|15.08|-|0|75|9
+Bob Simpson|AUS|6|OPN|46.82|42.26|71|82|O
+Bill Lawry|AUS|67|OPN|47.15|-|0|81|O
+Graham McKenzie|AUS|6|PACE|12.27|29.78|246|80
+Doug Walters|AUS|67|BAT|48.26|29.08|49|80|5
+Ian Chappell|AUS|67|BAT|42.42|65.8|20|83|3
+Greg Chappell|AUS|78|BAT|53.86|40.7|47|92|4
+Dennis Lillee|AUS|78|PACE|13.71|23.92|355|93
+Jeff Thomson|AUS|78|PACE|12.81|28|200|84
+Rod Marsh|AUS|78|WK|26.52|-|0|84|7
+Allan Border|AUS|89|BAT|50.56|39.1|39|89|4
+David Boon|AUS|89|BAT|43.66|-|0|80|3
+Craig McDermott|AUS|89|PACE|12.21|28.63|291|80
+Ian Healy|AUS|89|WK|27.4|-|0|84|7
+Mark Taylor|AUS|9|OPN|43.5|26|1|82|O
+Steve Waugh|AUS|890|BAT|51.06|37.44|92|90|5
+Mark Waugh|AUS|90|BAT|41.82|41.16|59|82|4
+Shane Warne|AUS|90|SPIN|17.33|25.41|708|98
+Glenn McGrath|AUS|90|PACE|7.37|21.64|563|97
+Jason Gillespie|AUS|90|PACE|18.74|26.13|259|83
+Matthew Hayden|AUS|90|OPN|50.74|-|0|90|O
+Justin Langer|AUS|90|OPN|45.27|-|0|83|O
+Ricky Ponting|AUS|901|BAT|51.85|55.2|5|94|3
+Adam Gilchrist|AUS|90|WK|47.61|-|0|95|7
+Damien Martyn|AUS|90|BAT|46.38|84|2|82|4
+Stuart MacGill|AUS|90|SPIN|9.69|29.02|208|78
+Brett Lee|AUS|0|PACE|20.15|30.81|310|82
+Michael Hussey|AUS|01|BAT|51.53|43.71|7|84|4
+Michael Clarke|AUS|01|BAT|49.11|38.19|31|85|5
+Mitchell Johnson|AUS|01|PACE|22.2|28.4|313|84
+Shane Watson|AUS|01|ARP|35.2|33.68|75|77
+David Warner|AUS|12|OPN|44.6|67.25|4|86|O
+Steve Smith|AUS|12|BAT|55.29|53.05|19|95|4
+Nathan Lyon|AUS|12|SPIN|13.08|30.34|577|85
+Mitchell Starc|AUS|12|PACE|19.59|25.97|460|87
+Josh Hazlewood|AUS|12|PACE|11.27|24.1|313|86
+Pat Cummins|AUS|12|PACE|16.48|22.51|328|92
+Marnus Labuschagne|AUS|12|BAT|42.64|58|15|84|3
+Travis Head|AUS|12|BAT|42.66|41.93|16|82|5
+Usman Khawaja|AUS|12|OPN|42.96|-|0|82|O3
+Tim Paine|AUS|1|WK|32.64|-|0|74|7
+Alex Carey|AUS|2|WK|34.85|-|0|78|7
+Cameron Green|AUS|2|ARP|34.69|39.82|39|77
+
+Jack Hobbs|ENG|P|OPN|56.95|165|1|94|O
+Herbert Sutcliffe|ENG|P|OPN|60.73|-|0|91|O
+Wally Hammond|ENG|P|BAT|58.46|37.8|83|93|4
+Frank Woolley|ENG|P|ARS|36.08|33.91|83|82
+Sydney Barnes|ENG|P|PACE|8.07|16.43|189|92
+Harold Larwood|ENG|P|PACE|19.4|28.35|78|84
+Hedley Verity|ENG|P|SPIN|20.91|24.37|144|85
+Les Ames|ENG|P|WK|40.57|-|0|82|7
+Len Hutton|ENG|P5|OPN|56.67|77.33|3|93|O
+Denis Compton|ENG|P5|BAT|50.06|56.4|25|88|4
+Alec Bedser|ENG|P5|PACE|12.75|24.89|236|85
+Godfrey Evans|ENG|P5|WK|20.5|-|0|80|7
+Peter May|ENG|5|BAT|46.77|-|0|85|34
+Jim Laker|ENG|5|SPIN|14.08|21.24|193|89
+Fred Trueman|ENG|56|PACE|13.82|21.57|307|91
+Brian Statham|ENG|56|PACE|11.44|24.84|252|85
+Ken Barrington|ENG|56|BAT|58.67|44.82|29|88|4
+Colin Cowdrey|ENG|567|BAT|44.07|-|0|85|5
+Ted Dexter|ENG|6|BAT|47.89|34.93|66|82|3
+Geoffrey Boycott|ENG|678|OPN|47.73|54.57|7|87|O
+Derek Underwood|ENG|678|SPIN|11.57|25.83|297|86
+Alan Knott|ENG|67|WK|32.75|-|0|86|7
+John Snow|ENG|67|PACE|13.54|26.66|202|82
+Tony Greig|ENG|7|ARP|40.44|32.2|141|82
+Bob Willis|ENG|78|PACE|11.51|25.2|325|85
+Ian Botham|ENG|789|ARP|33.55|28.4|383|92
+David Gower|ENG|789|BAT|44.25|20|1|85|4
+Graham Gooch|ENG|789|OPN|42.58|46.47|23|86|O
+Alec Stewart|ENG|90|WK|39.55|-|0|83|O
+Mike Atherton|ENG|90|OPN|37.7|151|2|80|O
+Graham Thorpe|ENG|90|BAT|44.66|-|0|80|45
+Angus Fraser|ENG|9|PACE|7.46|27.32|177|78
+Darren Gough|ENG|90|PACE|12.57|28.39|229|80
+Andrew Flintoff|ENG|90|ARP|31.78|32.78|226|84
+Michael Vaughan|ENG|0|BAT|41.44|93.5|6|80|O
+Kevin Pietersen|ENG|01|BAT|47.29|88.6|10|87|4
+Andrew Strauss|ENG|01|OPN|40.91|-|0|80|O
+Alastair Cook|ENG|01|OPN|45.35|7|1|87|O
+Ian Bell|ENG|01|BAT|42.69|76|1|80|5
+Matt Prior|ENG|01|WK|40.19|-|0|81|7
+Graeme Swann|ENG|01|SPIN|22.1|29.96|255|84
+James Anderson|ENG|012|PACE|8.96|26.45|704|93
+Stuart Broad|ENG|012|PACE|18.04|27.68|604|89
+Joe Root|ENG|12|BAT|50.45|48.09|74|94|4
+Ben Stokes|ENG|12|ARP|34.47|30.98|252|87
+Jonny Bairstow|ENG|12|WK|36.4|-|0|80|5
+Moeen Ali|ENG|12|ARS|28.13|37.31|204|76
+Harry Brook|ENG|2|BAT|53.09|127|1|86|5
+Jamie Smith|ENG|2|WK|39.72|-|0|77|7
+
+Vijay Merchant|IND|P|OPN|47.72|-|0|80|O
+Vijay Hazare|IND|P5|BAT|47.65|61|20|80|4
+Vinoo Mankad|IND|P5|ARS|31.48|32.32|162|82
+Pankaj Roy|IND|5|OPN|32.56|66|1|72|O
+Polly Umrigar|IND|56|BAT|42.22|42.08|35|79|5
+Subhash Gupte|IND|56|SPIN|6.31|29.55|149|79
+Mansur Ali Khan Pataudi|IND|67|BAT|34.91|88|1|76|5
+Farokh Engineer|IND|67|WK|31.08|-|0|76|O
+Bishan Bedi|IND|67|SPIN|8.99|28.71|266|85
+Erapalli Prasanna|IND|67|SPIN|11.48|30.38|189|81
+Bhagwath Chandrasekhar|IND|67|SPIN|4.07|29.74|242|82
+Gundappa Viswanath|IND|78|BAT|41.93|46|1|81|4
+Sunil Gavaskar|IND|78|OPN|51.12|206|1|92|O
+Dilip Vengsarkar|IND|78|BAT|42.13|-|0|80|3
+Syed Kirmani|IND|78|WK|27.05|13|1|75|8
+Kapil Dev|IND|789|ARP|31.05|29.64|434|89
+Ravi Shastri|IND|89|ARS|35.79|40.96|151|73
+Mohammad Azharuddin|IND|89|BAT|45.04|-|0|81|5
+Sachin Tendulkar|IND|8901|BAT|53.79|54.17|46|97|4
+Anil Kumble|IND|90|SPIN|17.77|29.65|619|91
+Javagal Srinath|IND|90|PACE|14.21|30.49|236|80
+Rahul Dravid|IND|901|BAT|52.31|39|1|91|3
+Sourav Ganguly|IND|90|BAT|42.18|52.53|32|81|5
+VVS Laxman|IND|901|BAT|45.97|63|2|83|5
+Harbhajan Singh|IND|901|SPIN|18.23|32.46|417|83
+Virender Sehwag|IND|01|OPN|49.34|47.35|40|89|O
+Zaheer Khan|IND|01|PACE|11.95|32.94|311|81
+Gautam Gambhir|IND|01|OPN|41.96|-|0|78|O
+MS Dhoni|IND|01|WK|38.09|-|0|84|7
+Ishant Sharma|IND|01|PACE|8.26|32.4|311|77
+Virat Kohli|IND|12|BAT|46.85|-|0|90|4
+Cheteshwar Pujara|IND|12|BAT|43.61|-|0|81|3
+Ravichandran Ashwin|IND|12|ARS|25.76|24|537|92
+Ravindra Jadeja|IND|12|ARS|37.82|25.3|356|88
+Rohit Sharma|IND|12|OPN|40.58|112|2|80|O
+Mohammed Shami|IND|12|PACE|12.1|27.71|229|82
+Jasprit Bumrah|IND|12|PACE|6.57|19.75|235|94
+Rishabh Pant|IND|12|WK|43.82|-|0|86|5
+Shubman Gill|IND|2|BAT|43.47|-|0|80|3
+Yashasvi Jaiswal|IND|2|OPN|47.49|-|0|84|O
+
+Hanif Mohammad|PAK|56|OPN|43.99|95|1|84|O
+Fazal Mahmood|PAK|5|PACE|14.09|24.7|139|84
+Imtiaz Ahmed|PAK|56|WK|29.28|-|0|70|O
+Saeed Ahmed|PAK|56|BAT|40.42|36.45|22|75|3
+Mushtaq Mohammad|PAK|67|ARS|39.17|29.22|79|78
+Asif Iqbal|PAK|67|BAT|38.86|28.33|53|75|6
+Majid Khan|PAK|678|OPN|38.92|53.92|27|79|O
+Wasim Bari|PAK|678|WK|15.88|-|0|71|8
+Zaheer Abbas|PAK|78|BAT|44.8|44|3|85|3
+Sadiq Mohammad|PAK|78|OPN|35.82|-|0|72|O
+Mudassar Nazar|PAK|78|OPN|38.09|38.36|66|74|O
+Sarfraz Nawaz|PAK|78|PACE|17.71|32.75|177|78
+Imran Khan|PAK|789|ARP|37.69|22.81|362|94
+Abdul Qadir|PAK|789|SPIN|15.59|32.8|236|82
+Javed Miandad|PAK|789|BAT|52.57|40.11|17|91|4
+Saleem Malik|PAK|89|BAT|43.7|82.8|5|79|5
+Wasim Akram|PAK|890|PACE|22.64|23.62|414|95
+Waqar Younis|PAK|890|PACE|10.2|23.56|373|92
+Saeed Anwar|PAK|90|OPN|45.53|-|0|82|O
+Inzamam-ul-Haq|PAK|90|BAT|49.61|-|0|88|4
+Moin Khan|PAK|90|WK|28.55|-|0|72|7
+Rashid Latif|PAK|90|WK|28.77|-|0|72|7
+Mushtaq Ahmed|PAK|90|SPIN|11.71|32.97|185|78
+Saqlain Mushtaq|PAK|90|SPIN|14.48|29.83|208|80
+Shoaib Akhtar|PAK|90|PACE|10.07|25.69|178|84
+Mohammad Yousuf|PAK|901|BAT|52.29|-|0|89|45
+Younis Khan|PAK|01|BAT|52.06|54.55|9|89|4
+Misbah-ul-Haq|PAK|01|BAT|46.63|-|0|80|5
+Kamran Akmal|PAK|01|WK|30.79|-|0|72|7
+Mohammad Asif|PAK|01|PACE|5.64|24.36|106|79
+Saeed Ajmal|PAK|01|SPIN|11|28.1|178|82
+Azhar Ali|PAK|12|OPN|42.26|77.62|8|77|3
+Yasir Shah|PAK|12|SPIN|14.12|31.38|244|80
+Sarfraz Ahmed|PAK|12|WK|37.42|-|0|74|7
+Babar Azam|PAK|12|BAT|42.66|21|2|82|4
+Mohammad Rizwan|PAK|12|WK|37.77|-|0|78|6
+Shaheen Shah Afridi|PAK|2|PACE|7.27|28.13|126|80
+
+Bruce Mitchell|SA|P|OPN|48.89|51.11|27|80|O
+Aubrey Faulkner|SA|P|ARS|40.79|26.58|82|82
+Dudley Nourse|SA|P5|BAT|53.82|-|0|83|4
+Hugh Tayfield|SA|56|SPIN|16.9|25.91|170|86
+Neil Adcock|SA|56|PACE|5.41|21.1|104|80
+John Waite|SA|56|WK|30.44|-|0|74|O
+Trevor Goddard|SA|56|ARP|34.47|26.22|123|78
+Graeme Pollock|SA|6|BAT|60.97|51|4|92|4
+Peter Pollock|SA|6|PACE|21.68|24.18|116|82
+Colin Bland|SA|6|BAT|49.09|62.5|2|78|5
+Eddie Barlow|SA|67|ARP|45.75|34.05|40|80
+Mike Procter|SA|67|ARP|25.11|15.02|41|82
+Barry Richards|SA|7|OPN|72.57|26|1|85|O
+Allan Donald|SA|90|PACE|10.69|22.25|330|92
+Shaun Pollock|SA|90|ARP|32.32|23.11|421|90
+Gary Kirsten|SA|90|OPN|45.27|71|2|82|O
+Jonty Rhodes|SA|90|BAT|35.66|-|0|72|6
+Herschelle Gibbs|SA|90|OPN|41.95|-|0|77|O
+Jacques Kallis|SA|901|ARP|55.37|32.65|292|97
+Mark Boucher|SA|901|WK|30.3|6|1|80|7
+Makhaya Ntini|SA|90|PACE|9.85|28.82|390|84
+Graeme Smith|SA|01|OPN|48.26|110.62|8|87|O
+AB de Villiers|SA|01|BAT|50.66|52|2|91|5
+Hashim Amla|SA|01|BAT|46.64|-|0|87|3
+Dale Steyn|SA|01|PACE|13.6|22.95|439|96
+Morne Morkel|SA|01|PACE|11.65|27.66|309|83
+Paul Harris|SA|01|SPIN|10.7|37.87|103|70
+Vernon Philander|SA|1|PACE|24.04|22.32|224|85
+Faf du Plessis|SA|12|BAT|40.03|-|0|79|5
+Dean Elgar|SA|12|OPN|37.92|44.86|15|77|O
+Quinton de Kock|SA|12|WK|38.82|-|0|82|7
+Kagiso Rabada|SA|12|PACE|12.78|21.95|357|91
+Keshav Maharaj|SA|12|SPIN|15.56|29.55|220|77
+Temba Bavuma|SA|12|BAT|39.01|61|1|76|6
+
+George Headley|WI|P|BAT|60.83|-|0|92|3
+Learie Constantine|WI|P|ARP|19.24|30.1|58|72
+Everton Weekes|WI|P5|BAT|58.62|77|1|90|4
+Clyde Walcott|WI|P5|BAT|56.69|37.09|11|88|5
+Frank Worrell|WI|56|BAT|49.49|38.72|69|85|3
+Sonny Ramadhin|WI|56|SPIN|8.2|28.98|158|80
+Alf Valentine|WI|56|SPIN|4.7|30.32|139|77
+Garfield Sobers|WI|567|ARP|57.78|34.03|235|99
+Rohan Kanhai|WI|567|BAT|47.53|-|0|85|3
+Wes Hall|WI|56|PACE|15.73|26.38|192|84
+Lance Gibbs|WI|567|SPIN|6.97|29.09|309|85
+Conrad Hunte|WI|56|OPN|45.07|55|2|80|O
+Charlie Griffith|WI|6|PACE|16.56|28.54|94|78
+Jackie Hendriks|WI|6|WK|18.63|-|0|70|8
+Deryck Murray|WI|678|WK|22.91|-|0|74|7
+Clive Lloyd|WI|678|BAT|46.68|62.2|10|87|5
+Andy Roberts|WI|78|PACE|14.94|25.61|202|87
+Michael Holding|WI|78|PACE|13.79|23.68|249|90
+Joel Garner|WI|78|PACE|12.44|20.97|259|91
+Colin Croft|WI|78|PACE|10.53|23.3|125|82
+Gordon Greenidge|WI|789|OPN|44.72|-|0|88|O
+Desmond Haynes|WI|789|OPN|42.3|8|1|85|O
+Viv Richards|WI|789|BAT|50.24|61.37|32|96|5
+Malcolm Marshall|WI|789|PACE|18.85|20.94|376|97
+Jeff Dujon|WI|89|WK|31.94|-|0|83|7
+Richie Richardson|WI|89|BAT|44.4|-|0|81|3
+Carl Hooper|WI|890|ARS|36.47|49.42|114|72
+Curtly Ambrose|WI|890|PACE|12.41|20.99|405|96
+Courtney Walsh|WI|890|PACE|7.55|24.44|519|91
+Brian Lara|WI|90|BAT|52.89|-|0|96|4
+Ridley Jacobs|WI|90|WK|28.32|-|0|71|7
+Shivnarine Chanderpaul|WI|901|BAT|51.37|98.11|9|88|5
+Chris Gayle|WI|01|OPN|42.19|42.73|73|81|O
+Ramnaresh Sarwan|WI|01|BAT|40.01|50.56|23|76|3
+Devendra Bishoo|WI|1|SPIN|15.37|37.17|117|66
+Kemar Roach|WI|012|PACE|12.09|26.94|304|81
+Jason Holder|WI|12|ARP|29.83|30.39|162|80
+Kraigg Brathwaite|WI|12|OPN|32.51|53.72|29|72|O
+Shai Hope|WI|12|WK|27.98|-|0|68|4
+Jayden Seales|WI|2|PACE|8.31|26.14|113|74
+
+Bert Sutcliffe|NZ|56|OPN|40.1|86|4|77|O
+John Reid|NZ|56|ARP|33.28|33.35|85|78
+Bev Congdon|NZ|67|BAT|32.22|36.5|59|72|3
+Glenn Turner|NZ|678|OPN|44.64|-|0|81|O
+Richard Hadlee|NZ|789|PACE|27.17|22.29|431|97
+John Wright|NZ|789|OPN|37.83|-|0|75|O
+Ewen Chatfield|NZ|78|PACE|8.57|32.17|123|72
+Martin Crowe|NZ|89|BAT|45.37|48.28|14|87|4
+Ian Smith|NZ|89|WK|25.56|-|0|72|89
+Chris Cairns|NZ|90|ARP|33.54|29.4|218|83
+Stephen Fleming|NZ|90|BAT|40.07|-|0|79|4
+Nathan Astle|NZ|90|BAT|37.02|42.01|51|74|5
+Daniel Vettori|NZ|901|ARS|30.01|34.36|362|82
+Shane Bond|NZ|0|PACE|12.92|22.09|87|80
+Brendon McCullum|NZ|01|WK|38.64|88|1|82|7
+Ross Taylor|NZ|012|BAT|44.67|16|3|83|4
+Tim Southee|NZ|012|PACE|15.48|30.26|391|82
+BJ Watling|NZ|012|WK|37.52|-|0|80|7
+Kane Williamson|NZ|12|BAT|54.06|40.23|30|93|3
+Trent Boult|NZ|12|PACE|15.81|27.49|317|85
+Neil Wagner|NZ|12|PACE|14.58|27.57|260|81
+Tom Latham|NZ|12|OPN|38.86|-|0|79|O
+Matt Henry|NZ|12|PACE|15.72|26.04|152|79
+Kyle Jamieson|NZ|2|PACE|20.92|20.23|90|78
+Devon Conway|NZ|2|OPN|41.89|-|0|78|O
+Daryl Mitchell|NZ|2|BAT|43.05|102.5|4|79|5
+Ajaz Patel|NZ|2|SPIN|11.53|28.82|91|70
+
+Duleep Mendis|SL|8|BAT|31.64|-|0|68|5
+Roshan Mahanama|SL|89|OPN|29.27|-|0|68|O
+Rumesh Ratnayake|SL|89|PACE|14.43|35.1|73|64
+Arjuna Ranatunga|SL|890|BAT|35.7|65|16|74|5
+Aravinda de Silva|SL|890|BAT|42.98|41.65|29|84|4
+Sanath Jayasuriya|SL|90|OPN|40.07|34.34|98|80|O
+Muttiah Muralitharan|SL|901|SPIN|11.68|22.72|800|99
+Chaminda Vaas|SL|90|PACE|24.32|29.58|355|82
+Marvan Atapattu|SL|90|OPN|39.02|24|1|76|O
+Mahela Jayawardene|SL|901|BAT|49.85|51.66|6|89|4
+Tillakaratne Dilshan|SL|901|OPN|40.99|43.87|39|77|O
+Kumar Sangakkara|SL|01|WK|57.41|-|0|96|3
+Thilan Samaraweera|SL|01|BAT|48.77|45.93|15|78|5
+Rangana Herath|SL|901|SPIN|14.65|28.07|433|85
+Prasanna Jayawardene|SL|01|WK|29.5|-|0|70|7
+Lasith Malinga|SL|01|PACE|11.46|33.15|101|71
+Angelo Mathews|SL|012|BAT|44.4|54.48|33|79|5
+Dimuth Karunaratne|SL|12|OPN|39.25|101|2|77|O
+Dinesh Chandimal|SL|12|WK|42.48|-|0|75|5
+Suranga Lakmal|SL|12|PACE|11.12|36.44|171|70
+Kusal Mendis|SL|12|BAT|36.94|118|1|72|3
+Prabath Jayasuriya|SL|2|SPIN|7.79|32.29|135|75
+Kamindu Mendis|SL|2|BAT|51.19|52.66|3|76|5
+
+Heath Streak|ZIM|90|ARP|22.36|28.14|216|80
+Andy Flower|ZIM|90|WK|51.55|-|0|87|5
+Grant Flower|ZIM|90|OPN|29.55|61.48|25|68|O
+Dave Houghton|ZIM|9|BAT|43.06|-|0|72|4
+
+Habibul Bashar|BAN|0|BAT|30.88|-|0|66|3
+Tamim Iqbal|BAN|012|OPN|38.89|-|0|76|O
+Shakib Al Hasan|BAN|012|ARS|37.78|31.72|246|86
+Mushfiqur Rahim|BAN|012|WK|38.92|-|0|77|5
+Mominul Haque|BAN|12|BAT|37.02|57.33|12|72|34
+Taijul Islam|BAN|12|SPIN|10.36|31.43|277|72
+Mehidy Hasan Miraz|BAN|12|ARS|23.87|32.36|237|74
+Taskin Ahmed|BAN|2|PACE|11.41|40.9|63|64
+`;
+
+// Name|Batting strike rate (runs per 100 balls)|Bowling strike rate (balls per wicket)
+// From ESPNcricinfo Statsguru (Nov 2026). Batting strike rate uses the innings where balls faced were recorded;
+// where fewer than half a player's innings have balls faced (mostly before the mid-1970s) the rate is an estimate.
+const STRIKE = `
+Don Bradman|58.6|80
+Bill Ponsford|44.8|
+Victor Trumper|55|68.2
+Stan McCabe|60|104
+Bert Oldfield|35|
+Bill O'Reilly|48.1|69.6
+Clarrie Grimmett|31.3|67.1
+Ray Lindwall|45|59.8
+Keith Miller|50|61.5
+Arthur Morris|45|55.5
+Neil Harvey|45|138
+Richie Benaud|50|77
+Alan Davidson|45|62.2
+Wally Grout|35|
+Bob Simpson|40|96.9
+Bill Lawry|39.2|
+Graham McKenzie|35|71.8
+Doug Walters|49.2|67.2
+Ian Chappell|45.6|143.6
+Greg Chappell|51.5|113.3
+Dennis Lillee|37.6|52
+Jeff Thomson|50.2|52.6
+Rod Marsh|46|
+Allan Border|41.1|102.7
+David Boon|41|
+Craig McDermott|54.8|56.9
+Ian Healy|49.7|
+Mark Taylor|41.5|42
+Steve Waugh|48.6|84.8
+Mark Waugh|52.3|82.2
+Shane Warne|57.7|57.4
+Glenn McGrath|40.8|51.9
+Jason Gillespie|32|54.9
+Matthew Hayden|60.1|
+Justin Langer|54.2|
+Ricky Ponting|58.7|117.4
+Adam Gilchrist|82|
+Damien Martyn|51.4|174
+Stuart MacGill|48.8|54
+Brett Lee|53|53.3
+Michael Hussey|50.1|84
+Michael Clarke|55.9|78.5
+Mitchell Johnson|58.4|51.1
+Shane Watson|52.6|73.2
+David Warner|70.2|85.5
+Steve Smith|53.8|77.3
+Nathan Lyon|49.7|61.9
+Mitchell Starc|58.2|45.4
+Josh Hazlewood|44|51.8
+Pat Cummins|46.8|46.5
+Marnus Labuschagne|52.1|92.5
+Travis Head|69.4|67.4
+Usman Khawaja|48.8|
+Tim Paine|45.7|
+Alex Carey|63|
+Cameron Green|49.7|67.2
+Jack Hobbs|50|376
+Herbert Sutcliffe|40|
+Wally Hammond|50|96
+Frank Woolley|55|78.2
+Sydney Barnes|30|41.6
+Harold Larwood|58.3|63.7
+Hedley Verity|25.1|77.5
+Les Ames|50|
+Len Hutton|40|86.6
+Denis Compton|50|108.4
+Alec Bedser|30|67.4
+Godfrey Evans|40|
+Peter May|45|
+Jim Laker|30|62.3
+Fred Trueman|40|49.4
+Brian Statham|35|63.7
+Ken Barrington|38|93.6
+Colin Cowdrey|40|
+Ted Dexter|50|80.5
+Geoffrey Boycott|35.5|134.8
+Derek Underwood|36|73.6
+Alan Knott|44.4|
+John Snow|36|59.5
+Tony Greig|46|69.5
+Bob Willis|32.6|53.4
+Ian Botham|60.7|56.9
+David Gower|50.6|36
+Graham Gooch|49.2|115.4
+Alec Stewart|48.7|
+Mike Atherton|37.5|204
+Graham Thorpe|45.9|
+Angus Fraser|28.6|61.4
+Darren Gough|43.5|51.6
+Andrew Flintoff|62|66.1
+Michael Vaughan|51.1|163
+Kevin Pietersen|61.7|131.1
+Andrew Strauss|48.9|
+Alastair Cook|47|18
+Ian Bell|49.5|108
+Matt Prior|61.7|
+Graeme Swann|76.5|60.1
+James Anderson|39.4|56.8
+Stuart Broad|65.3|55.7
+Joe Root|57.6|85.5
+Ben Stokes|58.5|55.8
+Jonny Bairstow|59.1|
+Moeen Ali|51.8|61.8
+Harry Brook|86.3|180
+Jamie Smith|73.4|
+Vijay Merchant|40|
+Vijay Hazare|40|142
+Vinoo Mankad|45|90.6
+Pankaj Roy|40|104
+Polly Umrigar|45|135
+Subhash Gupte|30|75.7
+Mansur Ali Khan Pataudi|45|132
+Farokh Engineer|50|
+Bishan Bedi|30|80.3
+Erapalli Prasanna|30|75.9
+Bhagwath Chandrasekhar|19.4|65.9
+Gundappa Viswanath|44.1|70
+Sunil Gavaskar|44.4|380
+Dilip Vengsarkar|42.4|
+Syed Kirmani|44|19
+Kapil Dev|80.9|63.9
+Ravi Shastri|36.8|104.3
+Mohammad Azharuddin|57.8|
+Sachin Tendulkar|54|92.1
+Anil Kumble|38.8|65.9
+Javagal Srinath|49.5|64
+Rahul Dravid|42.5|120
+Sourav Ganguly|51.3|97.4
+VVS Laxman|49.4|162
+Harbhajan Singh|64.8|68.5
+Virender Sehwag|82.2|93.2
+Zaheer Khan|51.7|60.4
+Gautam Gambhir|51.5|
+MS Dhoni|59.1|
+Ishant Sharma|30.6|61.6
+Virat Kohli|55.6|
+Cheteshwar Pujara|44.4|
+Ravichandran Ashwin|54.5|50.7
+Ravindra Jadeja|55.3|58.5
+Rohit Sharma|57.1|191.5
+Mohammed Shami|74.6|50.2
+Jasprit Bumrah|41.3|42.7
+Rishabh Pant|74.2|
+Shubman Gill|61.4|
+Yashasvi Jaiswal|66.5|
+Hanif Mohammad|30|206
+Fazal Mahmood|35|70.7
+Imtiaz Ahmed|45|
+Saeed Ahmed|45|90
+Mushtaq Mohammad|45|66.5
+Asif Iqbal|55|72.9
+Majid Khan|45.6|132.7
+Wasim Bari|33.5|
+Zaheer Abbas|55.2|123.3
+Sadiq Mohammad|41.8|
+Mudassar Nazar|41.2|90.4
+Sarfraz Nawaz|51|78.8
+Imran Khan|47.5|53.7
+Abdul Qadir|42.1|72.5
+Javed Miandad|46|86.4
+Saleem Malik|49.3|146.8
+Wasim Akram|52.8|54.6
+Waqar Younis|48|43.4
+Saeed Anwar|55.8|
+Inzamam-ul-Haq|54|
+Moin Khan|51.1|
+Rashid Latif|47.4|
+Mushtaq Ahmed|35.9|67.7
+Saqlain Mushtaq|25.7|67.6
+Shoaib Akhtar|41.4|45.7
+Mohammad Yousuf|52.4|
+Younis Khan|52.1|89.3
+Misbah-ul-Haq|44.5|
+Kamran Akmal|63.1|
+Mohammad Asif|30.5|48.7
+Saeed Ajmal|41.7|65.1
+Azhar Ali|41.9|108.3
+Yasir Shah|47.1|58.4
+Sarfraz Ahmed|70.2|
+Babar Azam|55.7|45
+Mohammad Rizwan|54.4|
+Shaheen Shah Afridi|42.8|53
+Bruce Mitchell|35|93.5
+Aubrey Faulkner|45|51.5
+Dudley Nourse|45|
+Hugh Tayfield|40|79.8
+Neil Adcock|30|61.4
+John Waite|35|
+Trevor Goddard|35|95.4
+Graeme Pollock|55|103.5
+Peter Pollock|40|56.2
+Colin Bland|45|197
+Eddie Barlow|45|75.5
+Mike Procter|54.7|36.9
+Barry Richards|59.5|72
+Allan Donald|35.1|47
+Shaun Pollock|52.5|57.8
+Gary Kirsten|43.4|174.5
+Jonty Rhodes|45.5|
+Herschelle Gibbs|50.3|
+Jacques Kallis|46|69.2
+Mark Boucher|50.1|8
+Makhaya Ntini|48.6|53.4
+Graeme Smith|59.7|177.2
+AB de Villiers|54.5|102
+Hashim Amla|50|
+Dale Steyn|44.3|42.3
+Morne Morkel|50.8|53.3
+Paul Harris|33.9|85.5
+Vernon Philander|44.5|50.8
+Faf du Plessis|46.3|
+Dean Elgar|47.8|69
+Quinton de Kock|70.9|
+Kagiso Rabada|52.5|39.4
+Keshav Maharaj|61|56.7
+Temba Bavuma|48.6|96
+George Headley|50|
+Learie Constantine|60|61.7
+Everton Weekes|50|122
+Clyde Walcott|55|108.5
+Frank Worrell|45|103.4
+Sonny Ramadhin|30|88.2
+Alf Valentine|25|93.1
+Garfield Sobers|50|91.9
+Rohan Kanhai|50|
+Wes Hall|40|54.2
+Lance Gibbs|25|87.7
+Conrad Hunte|40|135
+Charlie Griffith|40|59.9
+Jackie Hendriks|35|
+Deryck Murray|43.3|
+Clive Lloyd|57.8|171.6
+Andy Roberts|41.7|55.1
+Michael Holding|59|50.9
+Joel Garner|48|50.8
+Colin Croft|17.4|49.3
+Gordon Greenidge|49|
+Desmond Haynes|44.7|18
+Viv Richards|70.2|161.5
+Malcolm Marshall|52.7|46.7
+Jeff Dujon|46.3|
+Richie Richardson|47.8|
+Carl Hooper|50.3|121
+Curtly Ambrose|46.7|54.5
+Courtney Walsh|44.8|57.8
+Brian Lara|60.5|
+Ridley Jacobs|47.8|
+Shivnarine Chanderpaul|43.3|193.3
+Chris Gayle|60.3|97.3
+Ramnaresh Sarwan|46.8|87.9
+Devendra Bishoo|37.2|68.9
+Kemar Roach|35.9|51.8
+Jason Holder|54.9|69.7
+Kraigg Brathwaite|40.8|96.8
+Shai Hope|43.8|
+Jayden Seales|40.1|46.9
+Bert Sutcliffe|45|134.5
+John Reid|50|90.8
+Bev Congdon|40|95.2
+Glenn Turner|35|
+Richard Hadlee|57.3|50.8
+John Wright|35.3|
+Ewen Chatfield|23|84.2
+Martin Crowe|44.7|98.3
+Ian Smith|63.2|
+Chris Cairns|57.1|53.6
+Stephen Fleming|45.8|
+Nathan Astle|49.6|111.5
+Daniel Vettori|58.2|79.5
+Shane Bond|38.9|38.7
+Brendon McCullum|64.6|175
+Ross Taylor|59.3|33
+Tim Southee|82.7|60
+BJ Watling|42.6|
+Kane Williamson|52|71.7
+Trent Boult|60|54.9
+Neil Wagner|51.9|52.7
+Tom Latham|48.2|
+Matt Henry|75.5|50.2
+Kyle Jamieson|60|43.8
+Devon Conway|54.2|
+Daryl Mitchell|53.1|201.2
+Ajaz Patel|38.1|55.1
+Duleep Mendis|62.1|
+Roshan Mahanama|41|
+Rumesh Ratnayake|55.7|67.9
+Arjuna Ranatunga|50.5|148.3
+Aravinda de Silva|51|89.4
+Sanath Jayasuriya|65.2|83.5
+Muttiah Muralitharan|70.3|55
+Chaminda Vaas|43.9|66
+Marvan Atapattu|44.4|48
+Mahela Jayawardene|51.5|98.1
+Tillakaratne Dilshan|65.5|86.7
+Kumar Sangakkara|54.2|
+Thilan Samaraweera|46.9|88.4
+Rangana Herath|49.9|60
+Prasanna Jayawardene|48.7|
+Lasith Malinga|44.4|51.5
+Angelo Mathews|48.4|120.5
+Dimuth Karunaratne|51.5|156
+Dinesh Chandimal|50.4|
+Suranga Lakmal|48.2|72.7
+Kusal Mendis|58.6|132
+Prabath Jayasuriya|32.7|61.4
+Kamindu Mendis|62.2|60
+Heath Streak|37.1|62.7
+Andy Flower|45.1|
+Grant Flower|34.5|135.1
+Dave Houghton|45.5|
+Habibul Bashar|60.3|
+Tamim Iqbal|58|
+Shakib Al Hasan|61.7|63.7
+Mushfiqur Rahim|48.4|
+Mominul Haque|54.3|90
+Taijul Islam|38.7|61.7
+Mehidy Hasan Miraz|49.9|63.1
+Taskin Ahmed|51.4|65.3
+`;
+
+const COUNTRIES = {
+  AUS: { name: "Australia", c: ["#0b6b3a", "#f6c53d"] },
+  ENG: { name: "England", c: ["#1c2f6e", "#d23b3b"] },
+  IND: { name: "India", c: ["#1f6fd1", "#f08a24"] },
+  PAK: { name: "Pakistan", c: ["#0d6b33", "#ffffff"] },
+  SA:  { name: "South Africa", c: ["#0f7a4a", "#f2b632"] },
+  WI:  { name: "West Indies", c: ["#7a1d33", "#f2c230"] },
+  NZ:  { name: "New Zealand", c: ["#111111", "#e8e8e8"] },
+  SL:  { name: "Sri Lanka", c: ["#1c3f94", "#f5b800"] },
+  ZIM: { name: "Zimbabwe", c: ["#d2302f", "#f7d117"] },
+  BAN: { name: "Bangladesh", c: ["#0b6a4a", "#e0333c"] },
+};
+const ERAS = { P: "Pre-1950", 5: "1950s", 6: "1960s", 7: "1970s", 8: "1980s", 9: "1990s", 0: "2000s", 1: "2010s", 2: "2020s" };
+const ERA_ORDER = ["P", "5", "6", "7", "8", "9", "0", "1", "2"];
+const ROLE_LABEL = { OPN: "Opener", BAT: "Batter", WK: "Keeper", ARP: "Pace AR", ARS: "Spin AR", PACE: "Pace", SPIN: "Spin" };
+
+const POS_LABEL = ["Openers", "Openers", "Top order", "Top order", "Middle order", "Middle order", "Middle order", "Lower order", "Lower order", "Lower order", "Lower order"];
+const ROLE_IN_XI = { BAT: "Batter", WK: "Wicketkeeper", AR: "All-rounder", BOWL: "Bowler" };
+const NEEDS = { BAT: 6, WK: 1, AR: 1, BOWL: 3 };
+const NEED_LABEL = { BAT: "Batter", WK: "Keeper", AR: "All-rounder", BOWL: "Bowler" };
+const NEED_PLURAL = { BAT: "Batters", WK: "Keeper", AR: "All-rounder", BOWL: "Bowlers" };
+
+const PLAYERS = DATA.trim().split("\n").filter(l => l.trim()).map((l, i) => {
+  const [name, cc, eras, role, bat, bowl, wkts, rating, pos] = l.split("|");
+  return { id: i, name, cc, eras: eras.split(""), role, bat: +bat, bowl: bowl === "-" ? null : +bowl, wkts: +wkts, rating: +rating, pos: pos || "" };
+});
+
+const STRIKE_MAP = Object.fromEntries(STRIKE.trim().split("\n").map(l => { const [n, b, w] = l.split("|"); return [n, [+b || 45, w ? +w : null]]; }));
+for (const p of PLAYERS) {
+  const [b, w] = STRIKE_MAP[p.name] || [45, null];
+  p.batSR = b;
+  p.bowlSR = w || (p.bowl ? p.bowl * 2 : null);
+}
+
+const restricted = p => p.role === "OPN" || p.role === "BAT" || p.role === "WK";
+function roleOptions(p) {
+  if (p.role === "OPN" || p.role === "BAT") return ["BAT"];
+  if (p.role === "WK") return ["WK"];
+  if (p.role === "ARP" || p.role === "ARS") return ["AR", "BAT"];
+  return ["BOWL"];
+}
+function posList(p) {
+  const out = [];
+  for (const c of p.pos) { if (c === "O") out.push(0, 1); else out.push(+c - 1); }
+  return out;
+}
+const isBowler = p => p.role === "PACE" || p.role === "SPIN";
+function allowedPos(p) {
+  if (isBowler(p)) return [7, 8, 9, 10];
+  if (!restricted(p) || S.relaxed) return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  return posList(p);
+}
+function posText(p) {
+  if (isBowler(p)) return "Bats No. 8 to 11";
+  if (!restricted(p)) return "Can bat anywhere";
+  return "Bats " + p.pos.split("").map(c => c === "O" ? "opener" : "No. " + c).join(" or ");
+}
+
+let S;
+function fresh() {
+  return { v: 2, team: Array(11).fill(null), draw: null, rerolls: 3, sel: null, selRole: null, relaxed: false, lastPlaced: null, recent: [] };
+}
+const remaining = (role, team = S.team) => NEEDS[role] - team.filter(t => t && t.role === role).length;
+function used() { return new Set(S.team.filter(Boolean).map(t => t.pid)); }
+
+// Keep enough top-order spots free for the batters and keeper still to come.
+function feasibleAfter(slot, role) {
+  const team = S.team.slice(); team[slot] = { role };
+  const openIn = n => team.slice(0, n).filter(t => !t).length;
+  const tailOpen = team.slice(7).filter(t => !t).length;
+  if (tailOpen < remaining("BOWL", team)) return false;
+  if (S.relaxed) return true;
+  const bat = remaining("BAT", team), wk = remaining("WK", team);
+  return openIn(8) >= bat + wk;
+}
+function placements(p, onlyRole) {
+  const out = [];
+  for (const role of roleOptions(p)) {
+    if (onlyRole && role !== onlyRole) continue;
+    if (remaining(role) <= 0) continue;
+    for (const slot of allowedPos(p)) {
+      if (!S.team[slot] && feasibleAfter(slot, role)) out.push({ slot, role });
+    }
+  }
+  const pref = r => r.role === "BOWL" ? -r.slot : r.role === "AR" ? Math.abs(r.slot - 6) : r.slot;
+  return out.sort((a, b) => pref(a) - pref(b));
+}
+
+function validCombos() {
+  const u = used(), out = new Set();
+  for (const p of PLAYERS) {
+    if (u.has(p.id) || !placements(p).length) continue;
+    for (const e of p.eras) out.add(p.cc + "|" + e);
+  }
+  return [...out];
+}
+
+function newDraw() {
+  let combos = validCombos();
+  if (!combos.length && !S.relaxed) { S.relaxed = true; combos = validCombos(); }
+  const notRecent = combos.filter(c => !S.recent.includes(c));
+  if (notRecent.length) combos = notRecent;
+  const pick = combos[Math.floor(Math.random() * combos.length)];
+  const [cc, era] = pick.split("|");
+  S.draw = { cc, era };
+  S.recent = [pick, ...S.recent].slice(0, 6);
+  S.sel = null; S.selRole = null;
+}
+
+function drawPlayers() {
+  const { cc, era } = S.draw, u = used();
+  const order = ["OPN", "BAT", "WK", "ARP", "ARS", "PACE", "SPIN"];
+  return PLAYERS.filter(p => p.cc === cc && p.eras.includes(era) && !u.has(p.id))
+    .sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.name.localeCompare(b.name));
+}
+
+const fmt = n => (n == null ? "–" : (Math.round(n * 100) / 100).toFixed(2));
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function statLine(p) {
+  const parts = [`Bat avg <b>${fmt(p.bat)}</b>`];
+  if (p.wkts >= 20) parts.push(`<b>${p.wkts}</b> wkts at <b>${fmt(p.bowl)}</b>`);
+  parts.push(posText(p));
+  return parts.map(x => `<span>${x}</span>`).join("");
+}
+
+// ---------- tour simulation ----------
+const VENUES = {
+  AUS: ["MCG, Melbourne", "SCG, Sydney", "Adelaide Oval", "The Gabba, Brisbane", "WACA, Perth"],
+  ENG: ["Lord's, London", "The Oval, London", "Old Trafford, Manchester", "Headingley, Leeds", "Trent Bridge, Nottingham", "Edgbaston, Birmingham"],
+  IND: ["Eden Gardens, Kolkata", "Wankhede Stadium, Mumbai", "Chepauk, Chennai", "Feroz Shah Kotla, Delhi"],
+  PAK: ["Gaddafi Stadium, Lahore", "National Stadium, Karachi", "Rawalpindi Cricket Stadium"],
+  SA: ["Newlands, Cape Town", "The Wanderers, Johannesburg", "Kingsmead, Durban", "St George's Park, Gqeberha"],
+  WI: ["Kensington Oval, Bridgetown", "Sabina Park, Kingston", "Queen's Park Oval, Port of Spain", "Bourda, Georgetown"],
+  NZ: ["Basin Reserve, Wellington", "Eden Park, Auckland", "Lancaster Park, Christchurch"],
+  SL: ["SSC, Colombo", "Galle International Stadium", "Asgiriya Stadium, Kandy"],
+  ZIM: ["Harare Sports Club", "Queens Sports Club, Bulawayo"],
+  BAN: ["Shere Bangla Stadium, Mirpur", "Zahur Ahmed Chowdhury Stadium, Chattogram"],
+};
+// Chance that rain or bad light interrupts any one day of a Test at the ground.
+// Estimates from each ground's general record and climate, not a count of actual days lost.
+const WEATHER = {
+  "MCG, Melbourne": 0.12, "SCG, Sydney": 0.15, "Adelaide Oval": 0.07, "The Gabba, Brisbane": 0.18, "WACA, Perth": 0.05,
+  "Lord's, London": 0.22, "The Oval, London": 0.2, "Old Trafford, Manchester": 0.32, "Headingley, Leeds": 0.25, "Trent Bridge, Nottingham": 0.24, "Edgbaston, Birmingham": 0.24,
+  "Eden Gardens, Kolkata": 0.1, "Wankhede Stadium, Mumbai": 0.05, "Chepauk, Chennai": 0.1, "Feroz Shah Kotla, Delhi": 0.1,
+  "Gaddafi Stadium, Lahore": 0.12, "National Stadium, Karachi": 0.03, "Rawalpindi Cricket Stadium": 0.2,
+  "Newlands, Cape Town": 0.08, "The Wanderers, Johannesburg": 0.15, "Kingsmead, Durban": 0.2, "St George's Park, Gqeberha": 0.14,
+  "Kensington Oval, Bridgetown": 0.12, "Sabina Park, Kingston": 0.15, "Queen's Park Oval, Port of Spain": 0.2, "Bourda, Georgetown": 0.25,
+  "Basin Reserve, Wellington": 0.2, "Eden Park, Auckland": 0.22, "Lancaster Park, Christchurch": 0.2,
+  "SSC, Colombo": 0.2, "Galle International Stadium": 0.25, "Asgiriya Stadium, Kandy": 0.22,
+  "Harare Sports Club": 0.08, "Queens Sports Club, Bulawayo": 0.06,
+  "Shere Bangla Stadium, Mirpur": 0.15, "Zahur Ahmed Chowdhury Stadium, Chattogram": 0.18,
+};
+function weatherFor(R, venue) {
+  const p = WEATHER[venue] ?? 0.12;
+  const days = [1, 2, 3, 4, 5].map(() => {
+    if (R() >= p) return 0;
+    const y = R();
+    return y < 0.2 ? 90 : Math.round(90 * (0.1 + R() * 0.6)); // a full washout about one time in five
+  });
+  return { p, days, lost: days.reduce((a, b) => a + b, 0) };
+}
+
+// Home conditions: multiplier on bowling average (lower helps the bowler).
+// spinUse scales how much of the bowling the spinners get.
+const CONDITIONS = {
+  AUS: { pace: 0.95, spin: 1.08, spinUse: 0.9 }, ENG: { pace: 0.93, spin: 1.1, spinUse: 0.7 }, SA: { pace: 0.93, spin: 1.12, spinUse: 0.65 },
+  NZ: { pace: 0.93, spin: 1.12, spinUse: 0.65 }, WI: { pace: 0.96, spin: 1.05, spinUse: 0.85 }, ZIM: { pace: 1, spin: 1, spinUse: 1 },
+  IND: { pace: 1.12, spin: 0.88, spinUse: 1.7 }, PAK: { pace: 1.04, spin: 0.94, spinUse: 1.25 }, SL: { pace: 1.1, spin: 0.88, spinUse: 1.7 }, BAN: { pace: 1.12, spin: 0.9, spinUse: 1.6 },
+};
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+// Bowling style. Pure quicks open the bowling; medium pacers and spinners come on after.
+const MEDIUM = new Set(["Sydney Barnes", "Alec Bedser", "Fazal Mahmood", "Trevor Goddard", "Tony Greig", "Ewen Chatfield", "Shane Watson",
+  "Vernon Philander", "John Reid", "Eddie Barlow", "Cameron Green", "Learie Constantine", "Wally Hammond", "Graham Gooch", "Steve Waugh",
+  "Sourav Ganguly", "Frank Worrell", "Mudassar Nazar", "Stan McCabe", "Doug Walters", "Ted Dexter", "Greg Chappell", "Vijay Hazare",
+  "Majid Khan", "Asif Iqbal", "Angelo Mathews", "Nathan Astle", "Bev Congdon", "Mark Waugh"].filter(n => n !== "Mark Waugh"));
+const PART_SPIN = new Set(["Bob Simpson", "Ian Chappell", "Allan Border", "Mark Waugh", "Michael Clarke", "Ken Barrington", "Denis Compton",
+  "Joe Root", "Sachin Tendulkar", "Virender Sehwag", "Ravi Shastri", "Polly Umrigar", "Saeed Ahmed", "Javed Miandad", "Bruce Mitchell",
+  "Viv Richards", "Chris Gayle", "Ramnaresh Sarwan", "Kane Williamson", "Sanath Jayasuriya", "Tillakaratne Dilshan", "Grant Flower"]);
+const bowlType = p => (p.role === "SPIN" || p.role === "ARS" || PART_SPIN.has(p.name)) ? "spin" : "pace";
+const bowlKind = p => bowlType(p) === "spin" ? "spin" : MEDIUM.has(p.name) || !["PACE", "ARP"].includes(p.role) ? "medium" : "fast";
+const surname = n => n.split(" ").slice(-1)[0];
+
+// Best XI a country and decade can field, borrowing from the decade either side when short.
+function buildOpponent(cc, era, exclude) {
+  const idx = ERA_ORDER.indexOf(era);
+  const near = new Set([ERA_ORDER[idx - 1], ERA_ORDER[idx + 1]].filter(Boolean));
+  const pool = PLAYERS.filter(p => p.cc === cc && !exclude.has(p.id) && (p.eras.includes(era) || p.eras.some(e => near.has(e))))
+    .map(p => ({ p, score: p.rating - (p.eras.includes(era) ? 0 : 25), borrowed: !p.eras.includes(era) }))
+    .sort((a, b) => b.score - a.score);
+  const taken = new Set(), pick = (f, n) => {
+    const out = [];
+    for (const x of pool) { if (out.length >= n) break; if (!taken.has(x.p.id) && f(x.p)) { out.push(x); taken.add(x.p.id); } }
+    return out;
+  };
+  const wk = pick(p => p.role === "WK", 1);
+  const bowl = pick(p => p.role === "PACE" || p.role === "SPIN", 3);
+  let ar = pick(p => p.role === "ARP" || p.role === "ARS", 1);
+  if (!ar.length) ar = pick(p => p.role === "PACE" || p.role === "SPIN", 1);
+  const bat = pick(p => ["BAT", "OPN", "ARP", "ARS"].includes(p.role), 6);
+  if (wk.length < 1 || bowl.length < 3 || ar.length < 1 || bat.length < 6) return null;
+  const first = p => p.role === "OPN" ? 1 : p.pos ? (p.pos[0] === "O" ? 1 : +p.pos[0]) : 6.5;
+  const top = [...bat, ...wk, ...ar].sort((a, b) => first(a.p) - first(b.p) || b.p.bat - a.p.bat);
+  const tail = bowl.sort((a, b) => b.p.bat - a.p.bat);
+  const xi = [...top, ...tail];
+  return { cc, era, xi: xi.map(x => x.p), borrowed: xi.filter(x => x.borrowed).map(x => x.p.id),
+    strength: xi.reduce((s, x) => s + x.p.rating, 0) / 11 };
+}
+
+function bowlersOf(xi, cond, innNo) {
+  // Front-line bowlers plus anyone with a real Test bowling record as a part-timer.
+  const front = xi.filter(p => ["PACE", "SPIN", "ARP", "ARS"].includes(p.role));
+  const part = xi.filter(p => !front.includes(p) && p.wkts >= 20 && p.bowl).sort((a, b) => a.bowl - b.bowl).slice(0, 1);
+  // Spinners bowl more on turning pitches and as the pitch wears.
+  const wear = [0.85, 1, 1.15, 1.3][(innNo || 1) - 1] || 1;
+  const kindShare = { fast: 1.1, medium: 0.85, spin: cond.spinUse * wear };
+  const quality = p => (p.bowlSR || 100);
+  // New-ball pair: the two quickest, best strike-rate bowlers (medium pacers only if short of quicks).
+  const seam = front.filter(p => bowlType(p) === "pace").sort((a, b) =>
+    (bowlKind(a) === "fast" ? 0 : 1) - (bowlKind(b) === "fast" ? 0 : 1) || quality(a) - quality(b));
+  const newBall = seam.slice(0, 2);
+  const restSeam = seam.slice(2).sort((a, b) => (bowlKind(a) === "fast" ? 0 : 1) - (bowlKind(b) === "fast" ? 0 : 1));
+  const spin = front.filter(p => bowlType(p) === "spin").sort((a, b) => quality(a) - quality(b));
+  const order = [...newBall, ...restSeam, ...spin];
+  return [
+    ...order.map(p => ({ p, share: kindShare[bowlKind(p)] * (newBall.includes(p) ? 1.15 : 1) })),
+    ...part.map(p => ({ p, share: 0.2 * (bowlType(p) === "spin" ? cond.spinUse * wear : 1) })),
+  ];
+}
+// Ratings nudge the raw career numbers so an all-time great plays like one.
+// Kept gentle so career numbers stay recognisable: a 99-rated great gets about a 20% edge, not double.
+const form = p => Math.min(1.2, Math.max(0.85, Math.pow(p.rating / 88, 1.5)));
+// Long innings get harder: fatigue, new balls and the declaration all bite, so huge scores stay rare.
+const tame = s => s <= 100 ? s : s <= 200 ? 100 + (s - 100) * 0.7 : Math.min(400, 170 + (s - 200) * 0.4);
+function effAvg(p, cond) { return (p.bowl || 45) * (cond[bowlType(p)] || 1) / form(p); }
+function effSR(p, cond) { return (p.bowlSR || 100) * (cond[bowlType(p)] || 1) / form(p); }
+
+function innings(R, bat, field, cond, home, opts) {
+  const attack = bowlersOf(field, cond, opts.innNo);
+  // Share of the overs each bowler gets, then how often he takes a wicket per ball.
+  const fr = attack.map(b => b.share * (0.8 + R() * 0.4));
+  const frSum = fr.reduce((a, b) => a + b, 0);
+  const frac = fr.map(x => x / frSum);
+  const eSR = attack.map(b => effSR(b.p, cond)), eAvg = attack.map(b => effAvg(b.p, cond));
+  const econ = attack.map((b, i) => 6 * eAvg[i] / eSR[i]);
+  const weights = attack.map((b, i) => frac[i] / eSR[i]);
+  const wsum = weights.reduce((a, b) => a + b, 0);
+  const pickBowler = () => { let x = R() * wsum, i = 0; while (x > weights[i] && i < weights.length - 1) { x -= weights[i]; i++; } return i; };
+  const attackAvg = attack.reduce((s, b, i) => s + eAvg[i] * weights[i], 0) / wsum;
+  const factor = Math.min(1.25, Math.max(0.75, Math.pow(attackAvg / 29, 0.8))) * (home ? 1.02 : 0.98);
+  const wkAll = attack.map(() => 0);
+  const keeper = field.find(p => p.role === "WK") || field[6];
+  const extrasRate = 0.03 + R() * 0.03;
+  // Balls faced come from the batter's career strike rate, with some day-to-day variation.
+  const srOf = p => p.batSR * (0.85 + R() * 0.3);
+  const ballsFor = (runs, sr) => runs === 0 ? 1 + Math.floor(R() * 14) : Math.max(1, Math.round(runs * 100 / sr));
+  const card = []; let runs = 0, wkts = 0, balls = 0, ended = "all out", striker = 0, lastWicketBowler = -1;
+  const ballsLeft = () => opts.oversLeft * 6 - balls;
+  while (striker < 11) {
+    const p = bat[striker], sr = srOf(p);
+    const mu = Math.max(4, p.bat) * form(p) * factor;
+    let s = Math.floor(tame(-mu * Math.log(1 - R())));
+    let out = true;
+    if (striker === 10) { s = Math.floor(s * 0.5); out = false; }
+    let b = ballsFor(s, sr);
+    const capRun = opts.target != null ? opts.target - runs : Infinity;
+    const capDecl = opts.declareAt != null ? opts.declareAt - runs : Infinity;
+    const capTimeBalls = Math.max(0, Math.floor(ballsLeft()));
+    if (s >= capRun || s >= capDecl || b >= capTimeBalls) {
+      const runCap = Math.min(capRun, capDecl);
+      if (b >= capTimeBalls && Math.round(capTimeBalls * sr / 100) < runCap) {
+        b = capTimeBalls; s = Math.round(b * sr / 100); ended = "time";
+      } else {
+        s = Math.max(0, Math.ceil(runCap)); b = Math.max(1, ballsFor(s, sr)); ended = runCap === capRun ? "target" : "declared";
+      }
+      out = false;
+    }
+    runs += s; balls += b;
+    let how = "not out";
+    if (out) {
+      wkts++;
+      if (R() < 0.05) { how = "run out"; lastWicketBowler = -1; }
+      else {
+        const bi = pickBowler(); lastWicketBowler = bi;
+        wkAll[bi]++;
+        const bw = attack[bi].p, bn = surname(bw.name), y = R();
+        const spin = bowlType(bw) === "spin";
+        if (y < 0.18) how = `b ${bn}`;
+        else if (y < 0.36) how = `lbw b ${bn}`;
+        else if (spin && y < 0.4) how = `st †${surname(keeper.name)} b ${bn}`;
+        else if (y < 0.42) how = `c & b ${bn}`;
+        else {
+          const others = field.filter(x => x !== bw);
+          const f = (!spin && R() < 0.4) ? keeper : others[Math.floor(R() * others.length)];
+          how = `c ${f === keeper ? "†" : ""}${surname(f.name)} b ${bn}`;
+        }
+      }
+    }
+    card.push({ name: p.name, how, r: s, b });
+    if (!out) {
+      if (ended !== "all out" && striker + 1 < 11) {
+        const q = bat[striker + 1], qs = srOf(q);
+        const r2 = ended === "target" ? 0 : Math.floor(Math.min(30, q.bat * R() * 0.6));
+        const b2 = Math.max(1, Math.round(r2 * 100 / qs));
+        card.push({ name: q.name, how: "not out", r: r2, b: b2 });
+        runs += r2; balls += b2;
+      }
+      break;
+    }
+    striker++;
+  }
+  const extras = Math.round(runs * extrasRate);
+  runs += extras;
+  balls = Math.max(1, balls + Math.round(extras * 0.4)); // byes and leg byes use up deliveries too
+  // Every over is complete except the final one of the innings.
+  const full = Math.floor(balls / 6), rem = balls % 6;
+  const exact = frac.map(x => x * full);
+  const ov = exact.map(Math.floor);
+  const left = full - ov.reduce((a, b) => a + b, 0);
+  exact.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]).slice(0, left).forEach(([, i]) => ov[i]++);
+  const lastBowler = rem ? (wkts === 10 && lastWicketBowler >= 0 ? lastWicketBowler : pickBowler()) : -1;
+  const bBalls = ov.map((o, i) => o * 6 + (i === lastBowler ? rem : 0));
+  // Runs conceded follow each bowler's career economy rate.
+  const conc = bBalls.map((x, i) => x * econ[i]);
+  const concSum = conc.reduce((a, b) => a + b, 0) || 1;
+  const want = conc.map(c => c / concSum * (runs - extras));
+  const rr = want.map(Math.floor);
+  let spare = (runs - extras) - rr.reduce((a, b) => a + b, 0);
+  want.map((x, i) => [x - Math.floor(x), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (spare > 0 && bBalls[i] > 0) { rr[i]++; spare--; } });
+  const bowling = attack.map((b, i) => ({
+    name: b.p.name, o: `${ov[i]}${i === lastBowler ? "." + rem : ""}`, balls: bBalls[i],
+    m: Math.min(ov[i], Math.round(ov[i] * Math.max(0.04, 0.42 - econ[i] * 0.09) * (0.7 + R() * 0.6))), r: rr[i], w: wkAll[i] })).filter(b => b.balls > 0);
+  const dnb = bat.slice(card.length).map(p => p.name);
+  return { card, dnb, extras, runs, wkts, overs: balls / 6, balls, ended, bowling };
+}
+
+function playTest(R, mine, opp, venue) {
+  const cond = CONDITIONS[opp.cc];
+  const T = { us: mine, them: opp.xi };
+  const weather = weatherFor(R, venue);
+  let oversLeft = 450 - weather.lost;
+  const inns = [];
+  const go = (side, opts) => {
+    const inn = innings(R, T[side], T[side === "us" ? "them" : "us"], cond, side === "them", { ...opts, oversLeft, innNo: inns.length + 1 });
+    inn.side = side; oversLeft -= inn.overs; inns.push(inn); return inn;
+  };
+  const tossUs = R() < 0.5;
+  const A = tossUs ? "us" : "them", B = tossUs ? "them" : "us";
+  // Big first-innings totals get declared, as captains do to leave time to bowl the other side out twice.
+  const i1 = go(A, { declareAt: 520 + Math.floor(R() * 160) });
+  const i2 = go(B, { declareAt: Math.max(520 + Math.floor(R() * 160), i1.runs + 120 + Math.floor(R() * 150)) });
+  let result;
+  const total = side => inns.filter(i => i.side === side).reduce((s, i) => s + i.runs, 0);
+  const finish = () => {
+    const last = inns[inns.length - 1];
+    const chasing = last.side, other = chasing === "us" ? "them" : "us";
+    if (total(chasing) > total(other)) return { winner: chasing, how: `by ${10 - last.wkts} wicket${10 - last.wkts === 1 ? "" : "s"}` };
+    if (last.ended === "all out" && total(chasing) < total(other)) return { winner: other, how: `by ${total(other) - total(chasing)} runs` };
+    return { winner: null };
+  };
+  if (oversLeft <= 0) result = { winner: null };
+  else if (i2.ended === "all out" && i1.runs - i2.runs >= 200) {
+    // follow-on
+    const i3 = go(B, {});
+    if (i3.ended === "all out" && total(B) < total(A)) result = { winner: A, how: `by an innings and ${total(A) - total(B)} runs` };
+    else if (oversLeft <= 0) result = { winner: null };
+    else { go(A, { target: total(B) - total(A) + 1 }); result = finish(); }
+  } else {
+    const lead = i1.runs - i2.runs;
+    const want = 280 + Math.floor(R() * 150);
+    const i3 = go(A, { declareAt: Math.max(0, want - lead), oversLeft });
+    if (i3.ended === "all out" && total(A) < total(B)) result = { winner: B, how: `by an innings and ${total(B) - total(A)} runs` };
+    else if (oversLeft <= 0) result = { winner: null };
+    else { go(B, { target: total(A) - total(B) + 1 }); result = finish(); }
+  }
+  return { opp, venue, inns, result, weather };
+}
+
+function seedOf(team) { let h = 2166136261; for (const t of team) { h ^= t.pid + 7; h = Math.imul(h, 16777619); } return h >>> 0; }
+
+const TOUR_CACHE = {};
+function simulateTour(team, salt) {
+  const key = team.map(t => t.pid).join(",") + "|" + salt;
+  if (TOUR_CACHE[key]) return TOUR_CACHE[key];
+  const R = rng(seedOf(team) + salt * 7919);
+  const mine = team.map(t => PLAYERS[t.pid]);
+  const exclude = new Set(mine.map(p => p.id));
+  // every country and decade that can field a full XI
+  const options = [];
+  for (const cc of Object.keys(COUNTRIES)) for (const era of ERA_ORDER) {
+    const o = buildOpponent(cc, era, exclude);
+    if (o) options.push(o);
+  }
+  // shuffle, then take one per country in turn so the tour visits as many countries as possible
+  for (let i = options.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
+  const chosen = [], byCountry = {};
+  for (const o of options) (byCountry[o.cc] = byCountry[o.cc] || []).push(o);
+  while (chosen.length < 11 && Object.values(byCountry).some(a => a.length)) {
+    for (const cc of Object.keys(byCountry)) { if (chosen.length < 11 && byCountry[cc].length) chosen.push(byCountry[cc].shift()); }
+  }
+  const used = {};
+  const tests = chosen.map(o => {
+    const vs = VENUES[o.cc]; used[o.cc] = (used[o.cc] || 0);
+    const venue = vs[(used[o.cc]++ + Math.floor(R() * vs.length)) % vs.length];
+    return playTest(R, mine, o, venue);
+  });
+  return (TOUR_CACHE[key] = tests);
+}
+
+// ---------- scoring ----------
+function results() {
+  const rows = S.team.map((t, i) => ({ p: PLAYERS[t.pid], slot: i, role: t.role, val: PLAYERS[t.pid].rating }));
+  const avg = a => a.reduce((s, r) => s + r.val, 0) / a.length;
+  const team = avg(rows);
+  const batting = avg(rows.slice(0, 7));
+  const bowling = avg(rows.filter(r => r.role === "AR" || r.role === "BOWL"));
+  const rating = Math.round(team * 10) / 10;
+  const tests = simulateTour(S.team, S.tour || 0);
+  const wins = tests.filter(t => t.result.winner === "us").length;
+  const losses = tests.filter(t => t.result.winner === "them").length;
+  const draws = tests.length - wins - losses;
+  return { rows, rating, batting, bowling, wins, draws, losses, tests };
+}
+
+function verdict(r) {
+  if (r.wins === 11) return ["Unbeatable", "Eleven Tests, eleven wins. Nobody in any era lives with this side."];
+  if (r.wins >= 9) return ["A golden generation", "This side wins everywhere, and only a stubborn rearguard or a washed-out day saves the opposition."];
+  if (r.wins >= 7) return ["Series winners", "Strong enough to win most series anywhere, but there is a soft spot an all-time attack would find."];
+  if (r.wins >= 4) return ["Competitive", "A good Test side with some passengers. It wins at home and draws a lot away."];
+  return ["Rebuilding", "The draws were not kind. A few of these picks would struggle to hold a place in an all-time squad."];
+}
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+
+function renderMeta() {
+  $("pickCount").textContent = S.team.filter(Boolean).length + "/11";
+  $("rerollCount").textContent = S.rerolls;
+  let best = null;
+  try { best = localStorage.getItem("txi-best-v2"); } catch (e) {}
+  $("best").textContent = best ? (+best).toFixed(1) : "–";
+  $("needs").innerHTML = Object.keys(NEEDS).map(k => {
+    const got = NEEDS[k] - remaining(k);
+    return `<span class="need${got === NEEDS[k] ? " full" : ""}">${NEED_PLURAL[k]} <b>${got}/${NEEDS[k]}</b></span>`;
+  }).join("");
+}
+
+function renderSheet() {
+  const done = S.team.every(Boolean);
+  const res = done ? results() : null;
+  const sel = S.sel != null ? PLAYERS[S.sel] : null;
+  const targets = sel ? new Set(placements(sel, S.selRole).map(x => x.slot)) : new Set();
+  $("sheet").innerHTML = POS_LABEL.map((label, i) => {
+    const t = S.team[i];
+    const target = targets.has(i);
+    if (!t) {
+      return `<div class="slot${target ? " target" : ""}">
+        <div class="no">${i + 1}</div>
+        <div class="who"><span class="pos">${label}</span><span class="nm empty">${target ? "Available for this pick" : "Empty"}</span></div>
+        <div class="rt hid">··</div></div>`;
+    }
+    const p = PLAYERS[t.pid];
+    return `<div class="slot${S.lastPlaced === i ? " fresh" : ""}">
+      <div class="no">${i + 1}</div>
+      <div class="who"><span class="pos">${t.role === "BOWL" ? (p.role === "SPIN" ? "Spin bowler" : "Pace bowler") : t.role === "BAT" && i < 2 ? "Opening batter" : ROLE_IN_XI[t.role]}</span><span class="nm">${esc(p.name)}</span>
+        <span class="from">${COUNTRIES[p.cc].name} · ${ERAS[t.era]}</span></div>
+      <div class="rt${res ? "" : " hid"}">${res ? p.rating : "??"}</div></div>`;
+  }).join("");
+}
+
+function renderDraw(animate) {
+  const { cc, era } = S.draw;
+  const C = COUNTRIES[cc];
+  const players = drawPlayers();
+  const list = players.map(p => {
+    const all = placements(p);
+    const off = !all.length;
+    const selected = S.sel === p.id;
+    let pick = "";
+    if (selected) {
+      const roles = [...new Set(all.map(x => x.role))];
+      const role = S.selRole && roles.includes(S.selRole) ? S.selRole : roles[0];
+      const toggle = roles.length > 1 ? `<div class="rolepick"><span>Pick as</span>${roles.map(r =>
+        `<button type="button" data-role="${r}" aria-pressed="${r === role}">${NEED_LABEL[r]}</button>`).join("")}</div>` : "";
+      pick = `${toggle}<div class="slotpick">${all.filter(x => x.role === role).map(x =>
+        `<button type="button" data-slot="${x.slot}" data-r="${x.role}">Bat at No. ${x.slot + 1}${x.slot < 2 && x.role !== "BAT" && x.role !== "WK" ? " (opens the batting)" : ""}</button>`).join("")}</div>`;
+    }
+    const why = off ? (roleOptions(p).every(r => remaining(r) <= 0) ? "Your " + roleOptions(p).map(r => NEED_PLURAL[r].toLowerCase()).join(" and ") + " spots are full" : "His batting spots are taken") : "";
+    return `<div class="row${off ? " off" : ""}${selected ? " sel" : ""}" ${off ? "" : `tabindex="0" role="button" data-pid="${p.id}"`} aria-disabled="${off}">
+      <span class="pname">${esc(p.name)}</span><span class="role r-${p.role}">${ROLE_LABEL[p.role]}</span>
+      <div class="stats">${statLine(p)}${off ? `<span class="why">${why}</span>` : ""}</div>${pick}</div>`;
+  }).join("");
+
+  $("left").innerHTML = `
+    <p class="eyebrow">Draw ${S.team.filter(Boolean).length + 1} of 11</p>
+    <div class="plates">
+      <div class="plate"><small>Country</small><span class="big" id="pc">${C.name}</span>
+        <span class="stripe" style="background:linear-gradient(90deg, ${C.c[0]} 0 60%, ${C.c[1]} 60%)"></span></div>
+      <div class="plate"><small>Decade</small><span class="big" id="pe">${ERAS[era]}</span></div>
+    </div>
+    <div class="drawbar">
+      <p class="hint">${S.relaxed ? "No one left in the pool fits your open spots, so batters can now bat anywhere." : S.sel == null ? "Pick a player, then choose where he bats." : "Now choose his spot in the order."}</p>
+      <button class="btn" id="reroll" type="button" ${S.rerolls ? "" : "disabled"}>Redraw (${S.rerolls} left)</button>
+    </div>
+    <div class="list">${list}</div>`;
+
+  $("reroll").onclick = () => { if (!S.rerolls) return; S.rerolls--; newDraw(); render(true); };
+  $("left").querySelectorAll(".row[data-pid]").forEach(el => {
+    const choose = () => { const id = +el.dataset.pid; S.sel = S.sel === id ? null : id; S.selRole = null; render(); };
+    el.addEventListener("click", e => { if (!e.target.closest("button")) choose(); });
+    el.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); choose(); } });
+  });
+  $("left").querySelectorAll("[data-role]").forEach(b => b.onclick = () => { S.selRole = b.dataset.role; render(); });
+  $("left").querySelectorAll("[data-slot]").forEach(b => b.onclick = () => place(S.sel, +b.dataset.slot, b.dataset.r));
+
+  if (animate) spin(C.name, ERAS[era]);
+}
+
+function spin(cName, eName) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const pc = $("pc"), pe = $("pe");
+  const names = Object.values(COUNTRIES).map(c => c.name), eras = Object.values(ERAS);
+  pc.parentElement.classList.add("rolling"); pe.parentElement.classList.add("rolling");
+  let n = 0;
+  const t = setInterval(() => {
+    n++;
+    pc.textContent = names[Math.floor(Math.random() * names.length)];
+    pe.textContent = eras[Math.floor(Math.random() * eras.length)];
+    if (n > 9) {
+      clearInterval(t);
+      pc.textContent = cName; pe.textContent = eName;
+      pc.parentElement.classList.remove("rolling"); pe.parentElement.classList.remove("rolling");
+    }
+  }, 55);
+}
+
+function renderResults() {
+  const r = results();
+  const [title, text] = verdict(r);
+  try {
+    const best = +(localStorage.getItem("txi-best-v2") || 0);
+    if (r.rating > best) localStorage.setItem("txi-best-v2", String(r.rating));
+  } catch (e) {}
+  const share = shareText(r);
+  const bar = (label, v) => `<div class="bar"><span class="lbl2">${label}</span>
+    <div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, (v - 60) / 40 * 100))}%"></div></div><span class="v">${v.toFixed(1)}</span></div>`;
+  $("left").innerHTML = `
+    <div class="result">
+      <p class="eyebrow">Full time · 11-Test series, all away from home</p>
+      <div class="score"><span class="num">${r.rating.toFixed(1)}</span>
+        <div><span class="lbl">Team rating</span><h2>${title}</h2></div></div>
+      <div class="record">
+        <div class="plate w"><small>Won</small><span class="big">${r.wins}</span></div>
+        <div class="plate"><small>Drawn</small><span class="big">${r.draws}</span></div>
+        <div class="plate l"><small>Lost</small><span class="big">${r.losses}</span></div>
+      </div>
+      <p class="verdict">${text}</p>
+      <div class="bars">${bar("Batting", r.batting)}${bar("Bowling", r.bowling)}</div>
+      <textarea class="share" id="shareBox" readonly aria-label="Your result to share">${esc(share)}</textarea>
+      <div class="actions">
+        <button class="btn solid" id="again" type="button">New draft</button>
+        <button class="btn" id="replay" type="button">Replay the tour</button>
+        <button class="btn" id="copy" type="button">Copy result</button>
+        <span class="copied" id="copied" hidden>Copied</span>
+      </div>
+    </div>`;
+  $("again").onclick = () => { S = fresh(); newDraw(); render(true); };
+  $("replay").onclick = () => { S.tour = (S.tour || 0) + 1; render(); };
+  renderTour(r);
+  $("copy").onclick = () => {
+    const show = () => { $("copied").hidden = false; };
+    const fallback = () => { const b = $("shareBox"); b.focus(); b.select(); $("copied").textContent = "Selected, press copy"; show(); };
+    try { navigator.clipboard.writeText(share).then(show, fallback); } catch (e) { fallback(); }
+  };
+}
+
+const ORD = n => n + ({ 1: "st", 2: "nd", 3: "rd" }[n] || "th");
+const oppName = o => `${COUNTRIES[o.cc].name} ${ERAS[o.era]}`;
+function resultLine(t) {
+  const w = t.result.winner;
+  if (!w) return "Match drawn";
+  return `${w === "us" ? "Your XI" : oppName(t.opp)} won ${t.result.how}`;
+}
+function borrowedFrom(p, era) {
+  const i = ERA_ORDER.indexOf(era);
+  const e = p.eras.find(x => Math.abs(ERA_ORDER.indexOf(x) - i) === 1);
+  return e ? ERAS[e] : "";
+}
+function inningsHtml(inn, team, nth) {
+  const total = inn.wkts === 10 ? `${inn.runs} all out` : `${inn.runs}/${inn.wkts}${inn.ended === "declared" ? " dec" : ""}`;
+  const balls = inn.balls;
+  const ov = Math.floor(balls / 6) + (balls % 6 ? "." + (balls % 6) : "");
+  return `<div class="inn"><h3>${esc(team)} · ${ORD(nth)} innings <span>${total}</span></h3>
+    <div class="inngrid">
+      <div class="tscroll"><table class="sc"><thead><tr><th>Batter</th><th>How out</th><th class="n">R</th><th class="n">B</th></tr></thead><tbody>
+        ${inn.card.map(c => `<tr><td>${esc(c.name)}</td><td class="how">${esc(c.how)}</td><td class="n">${c.r}${c.how === "not out" ? "*" : ""}</td><td class="n">${c.b}</td></tr>`).join("")}
+        <tr class="ex"><td>Extras</td><td></td><td class="n">${inn.extras}</td><td></td></tr>
+        <tr class="tot"><td>Total</td><td class="how">${ov} overs</td><td class="n" colspan="2">${total}</td></tr>
+      </tbody></table>${inn.dnb.length ? `<p class="dnb">Did not bat: ${inn.dnb.map(esc).join(", ")}</p>` : ""}</div>
+      <div class="tscroll"><table class="sc"><thead><tr><th>Bowler</th><th class="n">O</th><th class="n">M</th><th class="n">R</th><th class="n">W</th><th class="n">Econ</th></tr></thead><tbody>
+        ${inn.bowling.map(b => `<tr><td>${esc(b.name)}</td><td class="n">${b.o}</td><td class="n">${b.m}</td><td class="n">${b.r}</td><td class="n">${b.w}</td><td class="n">${b.balls ? (b.r / b.balls * 6).toFixed(2) : "–"}</td></tr>`).join("")}
+      </tbody></table></div>
+    </div></div>`;
+}
+function weatherLine(w) {
+  const odds = `Rain or bad light hits about ${Math.round(w.p * 100)}% of Test days here.`;
+  if (!w.lost) return `Weather: no play lost. ${odds}`;
+  const parts = w.days.map((o, i) => o === 90 ? `day ${i + 1} washed out` : o ? `${o} overs lost on day ${i + 1}` : null).filter(Boolean);
+  return `Weather: ${w.lost} overs lost (${parts.join(", ")}). ${odds}`;
+}
+function renderTour(r) {
+  const el = $("tour");
+  el.hidden = false;
+  el.innerHTML = `<h2>The 11-Test series</h2>
+    <p class="sub">An 11-Test series, each Test against the best XI one country could pick from one decade, and every match on their home ground. Conditions count: spinners get help in Asia, seamers in England, South Africa and New Zealand, and each ground has its own chance of rain or bad light. Open a Test for the full scorecard.</p>
+    ${r.tests.map((t, i) => {
+      const k = t.result.winner === "us" ? "W" : t.result.winner === "them" ? "L" : "D";
+      const n = { us: 0, them: 0 };
+      const inns = t.inns.map(inn => { n[inn.side]++; return inningsHtml(inn, inn.side === "us" ? "Your XI" : oppName(t.opp), n[inn.side]); }).join("");
+      const anyBorrowed = t.opp.borrowed.length > 0;
+      const squad = t.opp.xi.map(p => esc(p.name) + (t.opp.borrowed.includes(p.id) ? ` (${borrowedFrom(p, t.opp.era)})` : "")).join(", ");
+      return `<details class="match"><summary>
+          <span class="tno">Test ${i + 1}</span>
+          <span class="vs"><b>v ${esc(oppName(t.opp))}</b><span>${esc(t.venue)} · ${esc(resultLine(t))}</span></span>
+          <span class="res ${k}">${{ W: "Won", L: "Lost", D: "Drawn" }[k]}</span></summary>
+        <div class="mbody">
+          <p class="mresult">${esc(resultLine(t))} at ${esc(t.venue)}.</p>
+          <p class="squad">${weatherLine(t.weather)}</p>
+          <p class="squad">${esc(oppName(t.opp))}: ${squad}.${anyBorrowed ? " A decade in brackets means that player was borrowed from the next decade along to make up a full side." : ""}</p>
+          ${inns}
+        </div></details>`;
+    }).join("")}`;
+}
+
+function shareText(r) {
+  const lines = S.team.map((t, i) => {
+    const p = PLAYERS[t.pid];
+    return `${String(i + 1).padStart(2)}. ${p.name} (${p.cc}, ${ERAS[t.era]})`;
+  });
+  const tour = r.tests.map((t, i) => `Test ${i + 1} v ${oppName(t.opp)} (${t.venue}): ${resultLine(t)}`);
+  return `11-0 · rating ${r.rating.toFixed(1)} · ${r.wins}W ${r.draws}D ${r.losses}L\n` + lines.join("\n") + "\n\n" + tour.join("\n");
+}
+
+// Once the XI is picked, the bowlers bat in order of career batting average, best first.
+function orderTail() {
+  const slots = S.team.map((t, i) => t.role === "BOWL" ? i : -1).filter(i => i >= 0);
+  const bowlers = slots.map(i => S.team[i]).sort((a, b) => PLAYERS[b.pid].bat - PLAYERS[a.pid].bat);
+  slots.forEach((slot, k) => { S.team[slot] = bowlers[k]; });
+}
+
+function place(pid, slot, role) {
+  if (pid == null) return;
+  if (!placements(PLAYERS[pid], role).some(x => x.slot === slot)) return;
+  S.team[slot] = { pid, era: S.draw.era, role };
+  S.lastPlaced = slot;
+  S.sel = null; S.selRole = null;
+  if (S.team.every(Boolean)) { orderTail(); render(); return; }
+  newDraw();
+  render(true);
+}
+
+function render(animate) {
+  renderSheet();
+  if (S.team.every(Boolean)) renderResults(); else { renderDraw(animate); $("tour").hidden = true; }
+  renderMeta();
+  S.lastPlaced = null;
+}
+
+const SAVE_KEY = "txi-app-state-v2";
+function loadSaved() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 2 ? s : null; } catch (e) { return null; } }
+function saveState() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+{ const _render = render; render = function (...a) { const out = _render.apply(this, a); saveState(); return out; }; }
+document.addEventListener("visibilitychange", () => { if (document.hidden) saveState(); });
+function start(data) {
+  const saved = loadSaved();
+  if (!(data && data.S) && saved) data = { S: saved };
+  S = data && data.S && data.S.v === 2 ? data.S : fresh();
+  if (!S.draw && !S.team.every(Boolean)) newDraw();
+  render(!data || !data.S);
+}
+window.claude?.hot?.snapshot?.(() => ({ S }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+
+<script>
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
