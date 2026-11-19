@@ -1750,6 +1750,11 @@ async function openCard(r) {
   const file = blob && new File([blob], name, { type: "image/png" });
   const canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
   $("cardShare").hidden = !canShare;
+  // Inside Claude the viewer's save goes through the downloads capability; on the website a plain link works.
+  $("cardSave").onclick = null;
+  if (window.claude && window.claude.use) window.claude.use("downloads").then(dl => {
+    if (dl) $("cardSave").onclick = (e) => { e.preventDefault(); dl.save({ filename: name, data: blob }).catch(() => {}); };
+  }, () => {});
   $("cardHint").textContent = canShare ? "Share it straight to a chat, or save the image." : "Save the image, or press and hold it to copy or share.";
   $("cardShare").onclick = async () => {
     try { await navigator.share({ files: [file], text: `${shareText(r).split("\n").slice(0, 3).join("\n")}\n${PLAY_URL}` }); } catch (e) {}
