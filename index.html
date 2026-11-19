@@ -982,7 +982,7 @@ const restricted = p => p.role === "OPN" || p.role === "BAT" || p.role === "WK";
 function roleOptions(p) {
   if (p.role === "OPN" || p.role === "BAT") return ["BAT"];
   if (p.role === "WK") return ["WK"];
-  if (p.role === "ARP" || p.role === "ARS") return ["AR", "BAT"];
+  if (p.role === "ARP" || p.role === "ARS") return ["AR", "BAT", "BOWL"];
   return ["BOWL"];
 }
 function posList(p) {
@@ -1026,7 +1026,8 @@ function placements(p, onlyRole) {
   for (const role of roleOptions(p)) {
     if (onlyRole && role !== onlyRole) continue;
     if (remaining(role) <= 0) continue;
-    for (const slot of allowedPos(p)) {
+    // Anyone picked as one of the three bowlers starts in the tail, at No. 8 to 11.
+    for (const slot of (role === "BOWL" ? [7, 8, 9, 10] : allowedPos(p))) {
       if (!S.team[slot] && feasibleAfter(slot, role)) out.push({ slot, role });
     }
   }
@@ -1598,6 +1599,11 @@ function orderTail() {
   const slots = S.team.map((t, i) => t.role === "BOWL" ? i : -1).filter(i => i >= 0);
   const bowlers = slots.map(i => S.team[i]).sort((a, b) => PLAYERS[b.pid].bat - PLAYERS[a.pid].bat);
   slots.forEach((slot, k) => { S.team[slot] = bowlers[k]; });
+  // An all-rounder picked as a bowler moves up by batting average, above the keeper if he averages more.
+  const isAR = t => ["ARP", "ARS"].includes(PLAYERS[t.pid].role);
+  const group = S.team.map((t, i) => t.role === "WK" || (t.role === "BOWL" && isAR(t)) ? i : -1).filter(i => i >= 0);
+  const ranked = group.map(i => S.team[i]).sort((a, b) => PLAYERS[b.pid].bat - PLAYERS[a.pid].bat);
+  group.forEach((slot, k) => { S.team[slot] = ranked[k]; });
 }
 
 function place(pid, slot, role) {
