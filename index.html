@@ -1003,6 +1003,8 @@ function posText(p) {
 }
 
 let S;
+// Each XI gets its first tour plus this many replays, then it's time to draft a new side.
+const MAX_REPLAYS = 3;
 function fresh() {
   return { v: 2, team: Array(11).fill(null), draw: null, rerolls: 3, sel: null, selRole: null, relaxed: false, lastPlaced: null, recent: [] };
 }
@@ -1509,13 +1511,13 @@ function renderResults() {
       <textarea class="share" id="shareBox" readonly aria-label="Your result to share">${esc(share)}</textarea>
       <div class="actions">
         <button class="btn solid" id="again" type="button">New draft</button>
-        <button class="btn" id="replay" type="button">Replay the tour</button>
+        <button class="btn" id="replay" type="button" ${(S.tour || 0) >= MAX_REPLAYS ? "disabled" : ""}>${(S.tour || 0) >= MAX_REPLAYS ? "No replays left" : `Replay the tour (${MAX_REPLAYS - (S.tour || 0)} left)`}</button>
         <button class="btn" id="copy" type="button">Copy result</button>
         <span class="copied" id="copied" hidden>Copied</span>
       </div>
     </div>`;
   $("again").onclick = () => { S = fresh(); newDraw(); render(true); };
-  $("replay").onclick = () => { S.tour = (S.tour || 0) + 1; render(); };
+  $("replay").onclick = () => { if ((S.tour || 0) >= MAX_REPLAYS) return; S.tour = (S.tour || 0) + 1; render(); };
   renderTour(r);
   $("copy").onclick = () => {
     const show = () => { $("copied").hidden = false; };
