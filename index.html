@@ -991,6 +991,15 @@ function posList(p) {
   return out;
 }
 const isBowler = p => p.role === "PACE" || p.role === "SPIN";
+// Where each all-rounder batted in at least 40% of his Test innings (his most common spot if none reached 40%).
+// Picked as a batter he must bat there; picked as the all-rounder he can bat anywhere; picked as a bowler he bats 8 to 11.
+const AR_POS = Object.fromEntries("Keith Miller:5;Richie Benaud:7;Alan Davidson:7;Shane Watson:O;Cameron Green:6;Frank Woolley:3;Tony Greig:6;Ian Botham:6;Andrew Flintoff:67;Ben Stokes:6;Moeen Ali:7;Vinoo Mankad:O;Kapil Dev:7;Ravi Shastri:6;Ravichandran Ashwin:8;Ravindra Jadeja:7;Mushtaq Mohammad:4;Imran Khan:7;Aubrey Faulkner:5;Trevor Goddard:O;Eddie Barlow:O;Mike Procter:78;Shaun Pollock:8;Jacques Kallis:4;Learie Constantine:6;Garfield Sobers:6;Carl Hooper:5;Jason Holder:8;John Reid:4;Chris Cairns:7;Daniel Vettori:8;Heath Streak:8;Shakib Al Hasan:6;Mehidy Hasan Miraz:8".split(";").map(x => x.split(":")));
+const isAllRounder = p => p.role === "ARP" || p.role === "ARS";
+function slotsFor(p, role) {
+  if (role === "BOWL") return [7, 8, 9, 10];
+  if (role === "BAT" && isAllRounder(p) && AR_POS[p.name] && !S.relaxed) return posList({ pos: AR_POS[p.name] });
+  return allowedPos(p);
+}
 function allowedPos(p) {
   if (isBowler(p)) return [7, 8, 9, 10];
   if (!restricted(p) || S.relaxed) return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -998,6 +1007,7 @@ function allowedPos(p) {
 }
 function posText(p) {
   if (isBowler(p)) return "Bats No. 8 to 11";
+  if (isAllRounder(p) && AR_POS[p.name]) return "Bats anywhere as the all-rounder, " + AR_POS[p.name].split("").map(c => c === "O" ? "opener" : "No. " + c).join(" or ") + " as a batter";
   if (!restricted(p)) return "Can bat anywhere";
   return "Bats " + p.pos.split("").map(c => c === "O" ? "opener" : "No. " + c).join(" or ");
 }
@@ -1027,7 +1037,7 @@ function placements(p, onlyRole) {
     if (onlyRole && role !== onlyRole) continue;
     if (remaining(role) <= 0) continue;
     // Anyone picked as one of the three bowlers starts in the tail, at No. 8 to 11.
-    for (const slot of (role === "BOWL" ? [7, 8, 9, 10] : allowedPos(p))) {
+    for (const slot of slotsFor(p, role)) {
       if (!S.team[slot] && feasibleAfter(slot, role)) out.push({ slot, role });
     }
   }
