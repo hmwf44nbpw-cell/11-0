@@ -1207,61 +1207,65 @@ function innings(R, bat, field, cond, home, opts) {
   // Balls faced come from the batter's career strike rate, with some day-to-day variation.
   const srOf = p => p.batSR * (0.85 + R() * 0.3);
   const ballsFor = (runs, sr) => runs === 0 ? 1 + Math.floor(R() * 14) : Math.max(1, Math.round(runs * 100 / sr));
-  const card = []; let runs = 0, wkts = 0, balls = 0, ended = "all out", striker = 0, lastWicketBowler = -1;
-  const ballsLeft = () => opts.oversLeft * 6 - balls;
-  while (striker < 11) {
-    const p = bat[striker], sr = srOf(p);
+  // Each batter's innings potential: how many he would make, and off how many balls, before getting out.
+  const pot = bat.map((p, i) => {
+    const sr = srOf(p);
     const mu = Math.max(4, p.bat) * form(p) * factor;
     let s = Math.floor(tame(-mu * Math.log(1 - R())));
-    let out = true;
-    if (striker === 10) { s = Math.floor(s * 0.5); out = false; }
-    let b = ballsFor(s, sr);
-    const capRun = opts.target != null ? opts.target - runs : Infinity;
-    const capDecl = opts.declareAt != null ? opts.declareAt - runs : Infinity;
-    const capTimeBalls = Math.max(0, Math.floor(ballsLeft()));
-    if (s >= capRun || s >= capDecl || b >= capTimeBalls) {
-      const runCap = Math.min(capRun, capDecl);
-      if (b >= capTimeBalls && Math.round(capTimeBalls * sr / 100) < runCap) {
-        b = capTimeBalls; s = Math.round(b * sr / 100); ended = "time";
-      } else {
-        s = Math.max(0, Math.ceil(runCap)); b = Math.max(1, ballsFor(s, sr)); ended = runCap === capRun ? "target" : "declared";
-      }
-      out = false;
+    if (i === 10) s = Math.floor(s * 0.5);
+    return { s, b: ballsFor(s, sr) };
+  });
+  const dismiss = () => {
+    if (R() < 0.05) { lastWicketBowler = -1; return "run out"; }
+    const bi = pickBowler(); lastWicketBowler = bi;
+    wkAll[bi]++;
+    const bw = attack[bi].p, bn = surname(bw.name), y = R();
+    const spin = bowlType(bw) === "spin";
+    if (y < 0.18) return `b ${bn}`;
+    if (y < 0.36) return `lbw b ${bn}`;
+    if (spin && y < 0.4) return `st †${surname(keeper.name)} b ${bn}`;
+    if (y < 0.42) return `c & b ${bn}`;
+    const others = field.filter(x => x !== bw);
+    const f = (!spin && R() < 0.4) ? keeper : others[Math.floor(R() * others.length)];
+    return `c ${f === keeper ? "†" : ""}${surname(f.name)} b ${bn}`;
+  };
+  // Batters come in as partnerships and share the strike, so nobody faces every ball while the other end barely bats.
+  let wkts = 0, ended = "all out", lastWicketBowler = -1;
+  const mk = i => ({ i, name: bat[i].name, rate: pot[i].s / pot[i].b, left: pot[i].b, r: 0, bf: 0, out: false, how: "not out" });
+  const ent = [mk(0), mk(1)];
+  let A = ent[0], B = ent[1], next = 2, runsF = 0, ballsF = 0;
+  const runCap = Math.min(opts.target != null ? opts.target : Infinity, opts.declareAt != null ? opts.declareAt : Infinity);
+  const ballCap = Math.max(0, Math.floor(opts.oversLeft * 6));
+  while (true) {
+    const share = 0.5 + (R() - 0.5) * 0.24; // A's share of the strike in this stand
+    const tA = A.left / share, tB = B.left / (1 - share);
+    let T = Math.min(tA, tB), end = null;
+    const rate = share * A.rate + (1 - share) * B.rate;
+    const tRuns = rate > 0 ? (runCap - runsF) / rate : Infinity;
+    const tTime = ballCap - ballsF;
+    if (Math.min(tRuns, tTime) <= T) {
+      if (tRuns <= tTime) { T = Math.max(0, tRuns); end = runCap === opts.target ? "target" : "declared"; }
+      else { T = Math.max(0, tTime); end = "time"; }
     }
-    runs += s; balls += b;
-    let how = "not out";
-    if (out) {
-      wkts++;
-      if (R() < 0.05) { how = "run out"; lastWicketBowler = -1; }
-      else {
-        const bi = pickBowler(); lastWicketBowler = bi;
-        wkAll[bi]++;
-        const bw = attack[bi].p, bn = surname(bw.name), y = R();
-        const spin = bowlType(bw) === "spin";
-        if (y < 0.18) how = `b ${bn}`;
-        else if (y < 0.36) how = `lbw b ${bn}`;
-        else if (spin && y < 0.4) how = `st †${surname(keeper.name)} b ${bn}`;
-        else if (y < 0.42) how = `c & b ${bn}`;
-        else {
-          const others = field.filter(x => x !== bw);
-          const f = (!spin && R() < 0.4) ? keeper : others[Math.floor(R() * others.length)];
-          how = `c ${f === keeper ? "†" : ""}${surname(f.name)} b ${bn}`;
-        }
-      }
-    }
-    card.push({ name: p.name, how, r: s, b });
-    if (!out) {
-      if (ended !== "all out" && striker + 1 < 11) {
-        const q = bat[striker + 1], qs = srOf(q);
-        const r2 = ended === "target" ? 0 : Math.floor(Math.min(30, q.bat * R() * 0.6));
-        const b2 = Math.max(1, Math.round(r2 * 100 / qs));
-        card.push({ name: q.name, how: "not out", r: r2, b: b2 });
-        runs += r2; balls += b2;
-      }
-      break;
-    }
-    striker++;
+    for (const [x, sh] of [[A, share], [B, 1 - share]]) { x.bf += T * sh; x.r += T * sh * x.rate; x.left -= T * sh; }
+    runsF += T * rate; ballsF += T;
+    if (end) { ended = end; break; }
+    const o = tA <= tB ? A : B;
+    o.out = true; o.r = pot[o.i].s; o.bf = pot[o.i].b; o.how = dismiss();
+    wkts++;
+    if (wkts === 10 || next > 10) break;
+    const n = mk(next++); ent.push(n);
+    if (o === A) A = n; else B = n;
   }
+  const card = ent.map(e => ({ name: e.name, how: e.how, r: e.out ? e.r : Math.round(e.r), b: e.out ? e.bf : Math.round(e.bf) }));
+  let runs = card.reduce((s, c) => s + c.r, 0);
+  // Rounding must not leave a chase one run short.
+  if (ended === "target" && runs < opts.target) {
+    const live = card.filter((c, k) => !ent[k].out).sort((a, b) => b.b - a.b)[0];
+    live.r += opts.target - runs; runs = opts.target;
+  }
+  for (const c of card) if (c.r > 0 && c.b === 0) c.b = 1;
+  let balls = card.reduce((s, c) => s + c.b, 0);
   const extras = Math.round(runs * extrasRate);
   runs += extras;
   balls = Math.max(1, balls + Math.round(extras * 0.4)); // byes and leg byes use up deliveries too
