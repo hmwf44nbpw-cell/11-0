@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#123522">
-<meta name="description" content="Draft an all-time Test XI one country and decade at a time, then take them on an 11-Test tour.">
+<meta name="description" content="Draft an all-time Test XI one country and decade at a time, then take them on an 11-Test tour. New daily challenge every day.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -88,6 +88,16 @@ h1 span { color: var(--gold); }
   background: var(--plate); border: 1px solid var(--line); padding: 6px 12px; border-radius: 3px; color: var(--dim);
 }
 .pill b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+.modes { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: var(--plate); }
+.modes button {
+  font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase;
+  background: transparent; color: var(--dim); border: 0; padding: 6px 12px; cursor: pointer; min-height: 32px;
+}
+.modes button[aria-pressed="true"] { background: var(--gold); color: var(--plate); }
+.modes button:focus-visible { outline: 2px solid var(--chalk); outline-offset: -2px; }
+.dailyline { color: var(--dim); margin: 6px 0 0; }
+.dailyline b { color: var(--gold); }
+.emojis { font-size: 22px; letter-spacing: 2px; margin: 8px 0 0; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
@@ -263,6 +273,10 @@ textarea.share { width: 100%; min-height: 120px; background: var(--plate); color
       <p class="tag">Every draw hands you a country and a decade. Pick one player from it, fill the batting order, and see if your all-time Test side can go 11 and 0.</p>
     </div>
     <div class="meta">
+      <div class="modes" role="group" aria-label="Game mode">
+        <button type="button" id="modeDaily" aria-pressed="false">Daily</button>
+        <button type="button" id="modeFree" aria-pressed="true">Free play</button>
+      </div>
       <span class="pill">Picks <b id="pickCount">0/11</b></span>
       <span class="pill">Redraws <b id="rerollCount">3</b></span>
       <span class="pill">Best <b id="best">–</b></span>
@@ -1015,8 +1029,46 @@ function posText(p) {
 let S;
 // Each XI gets its first tour plus this many replays, then it's time to draft a new side.
 const MAX_REPLAYS = 3;
-function fresh() {
-  return { v: 2, team: Array(11).fill(null), draw: null, rerolls: 3, sel: null, selRole: null, relaxed: false, lastPlaced: null, recent: [] };
+function fresh(mode) {
+  const s = { v: 2, mode: "free", team: Array(11).fill(null), draw: null, rerolls: 3, sel: null, selRole: null, relaxed: false, lastPlaced: null, recent: [] };
+  if (mode === "daily") { const d = today(); s.mode = "daily"; s.day = d.no; s.tour = 100000 + d.no; s.seen = []; }
+  return s;
+}
+// ---------- daily challenge ----------
+// Day 1 is 19 Nov 2026, counted on the player's own calendar so a new challenge starts at their midnight.
+function today() {
+  const n = new Date();
+  const no = Math.floor((Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) - Date.UTC(2026, 10, 19)) / 864e5) + 1;
+  return { no, key: `${n.getFullYear()}-${n.getMonth() + 1}-${n.getDate()}` };
+}
+// Everyone gets the same running order of country-and-decade draws for the day.
+// Each draw is the next one in that order that still fits your team, so players see the same draws until their picks differ.
+const DAILY_SEQ = {};
+function dailySeq(day) {
+  if (DAILY_SEQ[day]) return DAILY_SEQ[day];
+  const all = [...new Set(PLAYERS.flatMap(p => p.eras.map(e => p.cc + "|" + e)))].sort();
+  const R = rng(0x11E0 + day * 2654435761);
+  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  return (DAILY_SEQ[day] = all);
+}
+// The inactive mode's game waits here, so switching modes never loses or resets a draft.
+let STASH = { free: null, daily: null };
+function switchMode(mode) {
+  if (S.mode === mode) return;
+  STASH[S.mode || "free"] = S;
+  let next = STASH[mode];
+  if (mode === "daily" && (!next || next.day !== today().no)) next = null;
+  STASH[mode] = null;
+  S = next || fresh(mode);
+  if (!S.draw && !S.team.every(Boolean)) newDraw();
+  render(true);
+}
+const STORE_KEY = "txi-state-v3";
+function persist() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ S, STASH })); } catch (e) {}
+}
+function restore() {
+  try { const d = JSON.parse(localStorage.getItem(STORE_KEY)); return d && d.S && d.S.v === 2 ? d : null; } catch (e) { return null; }
 }
 const remaining = (role, team = S.team) => NEEDS[role] - team.filter(t => t && t.role === role).length;
 function used() { return new Set(S.team.filter(Boolean).map(t => t.pid)); }
@@ -1057,6 +1109,14 @@ function validCombos() {
 function newDraw() {
   let combos = validCombos();
   if (!combos.length && !S.relaxed) { S.relaxed = true; combos = validCombos(); }
+  if (S.mode === "daily") {
+    const ok = new Set(combos), seen = new Set(S.seen || []);
+    const pick = dailySeq(S.day).find(c => ok.has(c) && !seen.has(c)) || dailySeq(S.day).find(c => ok.has(c)) || combos[0];
+    const [cc, era] = pick.split("|");
+    S.draw = { cc, era }; S.seen = [...(S.seen || []), pick];
+    S.sel = null; S.selRole = null;
+    return;
+  }
   const notRecent = combos.filter(c => !S.recent.includes(c));
   if (notRecent.length) combos = notRecent;
   const pick = combos[Math.floor(Math.random() * combos.length)];
@@ -1503,7 +1563,7 @@ function renderDraw(animate) {
   }).join("");
 
   $("left").innerHTML = `
-    <p class="eyebrow">Draw ${S.team.filter(Boolean).length + 1} of 11</p>
+    <p class="eyebrow">${S.mode === "daily" ? `Daily #${S.day} · same draws for everyone today · ` : ""}Draw ${S.team.filter(Boolean).length + 1} of 11</p>
     <div class="plates">
       <div class="plate"><small>Country</small><span class="big" id="pc">${C.name}</span>
         <span class="stripe" style="background:linear-gradient(90deg, ${C.c[0]} 0 60%, ${C.c[1]} 60%)"></span></div>
@@ -1557,7 +1617,7 @@ function renderResults() {
     <div class="track"><div class="fill" style="width:${Math.max(0, Math.min(100, (v - 60) / 40 * 100))}%"></div></div><span class="v">${v.toFixed(1)}</span></div>`;
   $("left").innerHTML = `
     <div class="result">
-      <p class="eyebrow">Full time · 11-Test series, all away from home</p>
+      <p class="eyebrow">${S.mode === "daily" ? `Daily #${S.day} · ` : ""}Full time · 11-Test series, all away from home</p>
       <div class="score"><span class="num">${r.rating.toFixed(1)}</span>
         <div><span class="lbl">Team rating</span><h2>${title}</h2></div></div>
       <div class="record">
@@ -1566,17 +1626,19 @@ function renderResults() {
         <div class="plate l"><small>Lost</small><span class="big">${r.losses}</span></div>
       </div>
       <p class="verdict">${text}</p>
+      ${S.mode === "daily" ? `<p class="emojis" aria-label="${r.wins} won, ${r.draws} drawn, ${r.losses} lost">${emojiRow(r)}</p>
+      <p class="dailyline">That's your one go at Daily #${S.day}. Share it, then try a free draft. Next daily in <b>${untilTomorrow()}</b>.</p>` : ""}
       <div class="bars">${bar("Batting", r.batting)}${bar("Bowling", r.bowling)}</div>
       <textarea class="share" id="shareBox" readonly aria-label="Your result to share">${esc(share)}</textarea>
       <div class="actions">
-        <button class="btn solid" id="again" type="button">New draft</button>
-        <button class="btn" id="replay" type="button" ${(S.tour || 0) >= MAX_REPLAYS ? "disabled" : ""}>${(S.tour || 0) >= MAX_REPLAYS ? "No replays left" : `Replay the tour (${MAX_REPLAYS - (S.tour || 0)} left)`}</button>
+        ${S.mode === "daily" ? `<button class="btn solid" id="again" type="button">Free play</button>` : `<button class="btn solid" id="again" type="button">New draft</button>
+        <button class="btn" id="replay" type="button" ${(S.tour || 0) >= MAX_REPLAYS ? "disabled" : ""}>${(S.tour || 0) >= MAX_REPLAYS ? "No replays left" : `Replay the tour (${MAX_REPLAYS - (S.tour || 0)} left)`}</button>`}
         <button class="btn" id="copy" type="button">Copy result</button>
         <span class="copied" id="copied" hidden>Copied</span>
       </div>
     </div>`;
-  $("again").onclick = () => { S = fresh(); newDraw(); render(true); };
-  $("replay").onclick = () => { if ((S.tour || 0) >= MAX_REPLAYS) return; S.tour = (S.tour || 0) + 1; render(); };
+  $("again").onclick = () => { if (S.mode === "daily") { switchMode("free"); return; } S = fresh(); newDraw(); render(true); };
+  if ($("replay")) $("replay").onclick = () => { if ((S.tour || 0) >= MAX_REPLAYS) return; S.tour = (S.tour || 0) + 1; render(); };
   renderTour(r);
   $("copy").onclick = () => {
     const show = () => { $("copied").hidden = false; };
@@ -1643,13 +1705,21 @@ function renderTour(r) {
     }).join("")}`;
 }
 
+const PLAY_URL = "https://hmwf44nbpw-cell.github.io/11-0/";
+const emojiRow = r => r.tests.map(t => t.result.winner === "us" ? "🟩" : t.result.winner === "them" ? "🟥" : "🟨").join("");
+function untilTomorrow() {
+  const n = new Date(), m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
+  const mins = Math.max(1, Math.round((m - n) / 60000));
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
 function shareText(r) {
   const lines = S.team.map((t, i) => {
     const p = PLAYERS[t.pid];
     return `${String(i + 1).padStart(2)}. ${p.name} (${p.cc}, ${ERAS[t.era]})`;
   });
   const tour = r.tests.map((t, i) => `Test ${i + 1} v ${oppName(t.opp)} (${t.venue}): ${resultLine(t)}`);
-  return `11-0 · rating ${r.rating.toFixed(1)} · ${r.wins}W ${r.draws}D ${r.losses}L\n` + lines.join("\n") + "\n\n" + tour.join("\n");
+  if (S.mode === "daily") return `11-0 Daily #${S.day} 🏏\n${r.wins}W ${r.draws}D ${r.losses}L · rating ${r.rating.toFixed(1)}\n${emojiRow(r)}\n` + lines.join("\n") + `\n\nPlay today's draws: ${PLAY_URL}`;
+  return `11-0 · rating ${r.rating.toFixed(1)} · ${r.wins}W ${r.draws}D ${r.losses}L\n${emojiRow(r)}\n` + lines.join("\n") + "\n\n" + tour.join("\n");
 }
 
 // Once the XI is picked, the bowlers bat in order of career batting average, best first.
@@ -1676,25 +1746,31 @@ function place(pid, slot, role) {
 }
 
 function render(animate) {
+  const daily = S.mode === "daily";
+  $("modeDaily").setAttribute("aria-pressed", String(daily));
+  $("modeFree").setAttribute("aria-pressed", String(!daily));
+  $("modeDaily").textContent = `Daily #${today().no}`;
   renderSheet();
   if (S.team.every(Boolean)) renderResults(); else { renderDraw(animate); $("tour").hidden = true; }
   renderMeta();
   S.lastPlaced = null;
+  persist();
 }
 
-const SAVE_KEY = "txi-app-state-v2";
-function loadSaved() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 2 ? s : null; } catch (e) { return null; } }
-function saveState() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
-{ const _render = render; render = function (...a) { const out = _render.apply(this, a); saveState(); return out; }; }
-document.addEventListener("visibilitychange", () => { if (document.hidden) saveState(); });
 function start(data) {
-  const saved = loadSaved();
-  if (!(data && data.S) && saved) data = { S: saved };
-  S = data && data.S && data.S.v === 2 ? data.S : fresh();
+  const fromHot = data && data.S && data.S.v === 2;
+  const saved = fromHot ? data : restore();
+  S = saved ? saved.S : fresh();
+  STASH = (saved && saved.STASH) || { free: null, daily: null };
+  if (!S.mode) S.mode = "free";
+  // Yesterday's daily is finished with: start today's when the player next opens Daily.
+  if (S.mode === "daily" && S.day !== today().no) { STASH.daily = null; S = STASH.free || fresh(); STASH.free = null; }
   if (!S.draw && !S.team.every(Boolean)) newDraw();
-  render(!data || !data.S);
+  $("modeDaily").onclick = () => switchMode("daily");
+  $("modeFree").onclick = () => switchMode("free");
+  render(!saved);
 }
-window.claude?.hot?.snapshot?.(() => ({ S }));
+window.claude?.hot?.snapshot?.(() => ({ S, STASH }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 </script>
 

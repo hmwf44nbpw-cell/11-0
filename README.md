@@ -4,6 +4,8 @@ A cricket draft game. Each draw gives you a country and a decade. Pick one playe
 
 **Play:** https://hmwf44nbpw-cell.github.io/11-0/
 
+A new Daily Challenge every day: everyone gets the same draws, you get one go, and you can share your result.
+
 Add it to your home screen to use it like an app. On iPhone, tap Share, then "Add to Home Screen". On Android, Chrome offers "Install app". It works offline once it has loaded.
 
 Player stats come from ESPNcricinfo Statsguru.
