@@ -12,6 +12,16 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="11-0">
+<meta property="og:title" content="11-0: draft an all-time Test XI">
+<meta property="og:description" content="One country and decade at a time, then an 11-Test tour away from home. New Daily Challenge every day.">
+<meta property="og:url" content="https://hmwf44nbpw-cell.github.io/11-0/">
+<meta property="og:image" content="https://hmwf44nbpw-cell.github.io/11-0/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://hmwf44nbpw-cell.github.io/11-0/og.png">
 <title>11-0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@400;500;600;700&display=swap">
@@ -98,6 +108,12 @@ h1 span { color: var(--gold); }
 .dailyline { color: var(--dim); margin: 6px 0 0; }
 .dailyline b { color: var(--gold); }
 .emojis { font-size: 22px; letter-spacing: 2px; margin: 8px 0 0; }
+.carddlg { border: 0; padding: 0; background: transparent; max-width: min(94vw, 520px); width: 100%; }
+.carddlg::backdrop { background: rgba(3, 12, 7, 0.82); }
+.cardbox { background: var(--board-2); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+.cardbox img { display: block; width: 100%; height: auto; max-height: 68vh; object-fit: contain; border-radius: 4px; }
+.cardhint { color: var(--dim); margin: 10px 0; font-size: 14px; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
@@ -1633,6 +1649,7 @@ function renderResults() {
       <div class="actions">
         ${S.mode === "daily" ? `<button class="btn solid" id="again" type="button">Free play</button>` : `<button class="btn solid" id="again" type="button">New draft</button>
         <button class="btn" id="replay" type="button" ${(S.tour || 0) >= MAX_REPLAYS ? "disabled" : ""}>${(S.tour || 0) >= MAX_REPLAYS ? "No replays left" : `Replay the tour (${MAX_REPLAYS - (S.tour || 0)} left)`}</button>`}
+        <button class="btn" id="card" type="button">Share card</button>
         <button class="btn" id="copy" type="button">Copy result</button>
         <span class="copied" id="copied" hidden>Copied</span>
       </div>
@@ -1640,11 +1657,104 @@ function renderResults() {
   $("again").onclick = () => { if (S.mode === "daily") { switchMode("free"); return; } S = fresh(); newDraw(); render(true); };
   if ($("replay")) $("replay").onclick = () => { if ((S.tour || 0) >= MAX_REPLAYS) return; S.tour = (S.tour || 0) + 1; render(); };
   renderTour(r);
+  $("card").onclick = () => openCard(r);
   $("copy").onclick = () => {
     const show = () => { $("copied").hidden = false; };
     const fallback = () => { const b = $("shareBox"); b.focus(); b.select(); $("copied").textContent = "Selected, press copy"; show(); };
     try { navigator.clipboard.writeText(share).then(show, fallback); } catch (e) { fallback(); }
   };
+}
+
+// ---------- share card ----------
+// A 1080 x 1350 image of the result (portrait, so it fills a phone screen and sits well in Instagram, WhatsApp and Messages).
+const CARD = { bg1: "#123522", bg2: "#0f2c1d", plate: "#081a10", line: "#2b5239", chalk: "#f0eee2", dim: "#97b09f", gold: "#f4c542",
+  win: "#5fc36e", draw: "#f4c542", loss: "#d2443a", disp: "'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif", body: "Barlow, 'Segoe UI', system-ui, sans-serif" };
+async function makeCard(r) {
+  try { await Promise.all(["900 100px 'Big Shoulders Display'", "800 40px 'Big Shoulders Display'", "600 30px Barlow", "500 30px Barlow"].map(f => document.fonts.load(f))); } catch (e) {}
+  const W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d"), C = CARD;
+  const rr = (X, Y, w, h, rad) => { x.beginPath(); x.moveTo(X + rad, Y); x.arcTo(X + w, Y, X + w, Y + h, rad); x.arcTo(X + w, Y + h, X, Y + h, rad); x.arcTo(X, Y + h, X, Y, rad); x.arcTo(X, Y, X + w, Y, rad); x.closePath(); };
+  const text = (s, X, Y, font, color, align = "left", spacing = 0) => { x.font = font; x.fillStyle = color; x.textAlign = align; if ("letterSpacing" in x) x.letterSpacing = spacing + "px"; x.fillText(s, X, Y); if ("letterSpacing" in x) x.letterSpacing = "0px"; };
+  // mown outfield stripes and the pitch
+  for (let i = 0; i < W; i += 90) { x.fillStyle = (i / 90) % 2 ? C.bg2 : C.bg1; x.fillRect(i, 0, 90, H); }
+  x.fillStyle = "rgba(201,183,122,0.13)"; x.fillRect(W / 2 - 70, 0, 140, H);
+  // scoreboard panel
+  rr(48, 48, W - 96, H - 96, 26); x.fillStyle = "rgba(8,26,16,0.94)"; x.fill(); x.lineWidth = 5; x.strokeStyle = C.chalk; x.stroke();
+  // header: logo and mode tag
+  text("11", 96, 196, `900 150px ${C.disp}`, C.chalk); const w11 = x.measureText("11").width;
+  text("-0", 96 + w11, 196, `900 150px ${C.disp}`, C.gold);
+  const tag = S.mode === "daily" ? `DAILY #${S.day}` : "FREE PLAY";
+  x.font = `800 38px ${C.disp}`; const tw = x.measureText(tag).width + 48 + ("letterSpacing" in x ? tag.length * 3 : 0);
+  rr(W - 96 - tw, 98, tw, 64, 8); x.fillStyle = S.mode === "daily" ? C.gold : "transparent"; x.fill(); x.lineWidth = 3; x.strokeStyle = C.gold; x.stroke();
+  text(tag, W - 96 - tw / 2, 143, `800 38px ${C.disp}`, S.mode === "daily" ? C.plate : C.gold, "center", 3);
+  text("ALL-TIME TEST XI · 11-TEST TOUR, ALL AWAY", W - 96, 200, `600 26px ${C.body}`, C.dim, "right", 1);
+  x.fillStyle = C.line; x.fillRect(96, 232, W - 192, 3);
+  // won / drawn / lost plates
+  const plates = [["WON", r.wins, C.win], ["DRAWN", r.draws, C.draw], ["LOST", r.losses, C.loss]];
+  const pw = (W - 192 - 40) / 3;
+  plates.forEach(([lbl, n, col], i) => {
+    const X = 96 + i * (pw + 20);
+    rr(X, 262, pw, 200, 14); x.fillStyle = "#0b2116"; x.fill(); x.lineWidth = 3; x.strokeStyle = C.line; x.stroke();
+    x.fillStyle = col; x.fillRect(X + 14, 262 + 200 - 12, pw - 28, 6);
+    text(lbl, X + pw / 2, 308, `800 30px ${C.disp}`, C.dim, "center", 4);
+    text(String(n), X + pw / 2, 430, `900 120px ${C.disp}`, col, "center");
+  });
+  // rating and verdict
+  const [title] = verdict(r);
+  text("TEAM RATING", 96, 522, `800 28px ${C.disp}`, C.dim, "left", 4);
+  text(r.rating.toFixed(1), 96, 626, `900 92px ${C.disp}`, C.chalk);
+  text(title.toUpperCase(), W - 96, 600, `900 56px ${C.disp}`, C.gold, "right", 1);
+  // one tile per Test
+  const tile = 66, gap = (W - 192 - tile * 11) / 10;
+  r.tests.forEach((t, i) => {
+    const X = 96 + i * (tile + gap), col = t.result.winner === "us" ? C.win : t.result.winner === "them" ? C.loss : C.draw;
+    rr(X, 650, tile, tile, 10); x.fillStyle = col; x.fill();
+    text(t.result.winner === "us" ? "W" : t.result.winner === "them" ? "L" : "D", X + tile / 2, 650 + 47, `900 36px ${C.disp}`, C.plate, "center");
+    text(t.opp.cc, X + tile / 2, 650 + tile + 30, `600 21px ${C.body}`, C.dim, "center");
+  });
+  // the XI
+  text("THE XI", 96, 808, `800 28px ${C.disp}`, C.dim, "left", 4);
+  x.fillStyle = C.line; x.fillRect(96, 822, W - 192, 2);
+  S.team.forEach((t, i) => {
+    const p = PLAYERS[t.pid], Y = 866 + i * 34.5;
+    text(String(i + 1), 128, Y, `800 28px ${C.disp}`, C.gold, "right");
+    let name = p.name; x.font = `600 28px ${C.body}`;
+    while (x.measureText(name).width > 560 && name.length > 4) name = name.slice(0, -2) + "…";
+    text(name, 150, Y, `600 28px ${C.body}`, C.chalk);
+    text(`${COUNTRIES[p.cc].name} · ${ERAS[t.era]}`, W - 96, Y, `500 26px ${C.body}`, C.dim, "right");
+  });
+  // footer
+  x.fillStyle = C.line; x.fillRect(96, 1238, W - 192, 2);
+  text("Can your all-time XI go 11-0?", 96, 1282, `600 30px ${C.body}`, C.chalk);
+  text(PLAY_URL.replace(/^https:\/\//, "").replace(/\/$/, ""), W - 96, 1282, `600 26px ${C.body}`, C.gold, "right");
+  return cv;
+}
+async function openCard(r) {
+  let dlg = $("cardDlg");
+  if (!dlg) {
+    dlg = document.createElement("dialog"); dlg.id = "cardDlg"; dlg.className = "carddlg";
+    dlg.innerHTML = `<div class="cardbox"><img id="cardImg" alt="Your 11-0 result card"><p class="cardhint" id="cardHint"></p>
+      <div class="actions"><button class="btn solid" id="cardShare" type="button">Share</button>
+      <a class="btn" id="cardSave" download="11-0-result.png">Save image</a>
+      <button class="btn" id="cardClose" type="button">Close</button></div></div>`;
+    document.body.appendChild(dlg);
+    $("cardClose").onclick = () => dlg.close();
+    dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+  }
+  const cv = await makeCard(r);
+  const url = cv.toDataURL("image/png");
+  $("cardImg").src = url; $("cardSave").href = url;
+  const name = S.mode === "daily" ? `11-0-daily-${S.day}.png` : "11-0-result.png";
+  $("cardSave").setAttribute("download", name);
+  const blob = await new Promise(res => cv.toBlob(res, "image/png"));
+  const file = blob && new File([blob], name, { type: "image/png" });
+  const canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+  $("cardShare").hidden = !canShare;
+  $("cardHint").textContent = canShare ? "Share it straight to a chat, or save the image." : "Save the image, or press and hold it to copy or share.";
+  $("cardShare").onclick = async () => {
+    try { await navigator.share({ files: [file], text: `${shareText(r).split("\n").slice(0, 3).join("\n")}\n${PLAY_URL}` }); } catch (e) {}
+  };
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
 }
 
 const ORD = n => n + ({ 1: "st", 2: "nd", 3: "rd" }[n] || "th");
