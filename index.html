@@ -98,6 +98,7 @@ h1 span { color: var(--gold); }
   background: var(--plate); border: 1px solid var(--line); padding: 6px 12px; border-radius: 3px; color: var(--dim);
 }
 .pill b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+.drawbtns { display: flex; flex-wrap: wrap; gap: 8px; }
 .modes { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: var(--plate); }
 .modes button {
   font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase;
@@ -3215,11 +3216,13 @@ function renderDraw(animate) {
     </div>
     <div class="drawbar">
       <p class="hint">${S.relaxed ? "No one left in the pool fits your open spots, so batters can now bat anywhere." : S.sel == null ? "Pick a player, then choose where he bats." : "Now choose his spot in the order."}</p>
-      <button class="btn" id="reroll" type="button" ${S.rerolls ? "" : "disabled"}>Redraw (${S.rerolls} left)</button>
+      <div class="drawbtns"><button class="btn" id="reroll" type="button" ${S.rerolls ? "" : "disabled"}>Redraw (${S.rerolls} left)</button>
+      <button class="btn" id="autoPick" type="button">${S.team.some(Boolean) ? "Random picks for the rest" : "Random XI"}</button></div>
     </div>
     <div class="list">${list}</div>`;
 
   $("reroll").onclick = () => { if (!S.rerolls) return; S.rerolls--; newDraw(); render(true); };
+  $("autoPick").onclick = autoPick;
   $("left").querySelectorAll(".row[data-pid]").forEach(el => {
     const choose = () => { const id = +el.dataset.pid; S.sel = S.sel === id ? null : id; S.selRole = null; render(); };
     el.addEventListener("click", e => { if (!e.target.closest("button")) choose(); });
@@ -3649,6 +3652,20 @@ function orderTail() {
   group.forEach((slot, k) => { S.team[slot] = ranked[k]; });
 }
 
+// Random XI: every remaining pick is a random player from each draw, put in a random spot he is allowed to fill.
+// The draws follow the usual rules, so in a Daily everyone still sees the same countries and decades.
+function autoPick() {
+  for (let guard = 0; !S.team.every(Boolean) && guard < 60; guard++) {
+    const opts = drawPlayers().flatMap(p => placements(p).map(x => ({ p, ...x })));
+    if (!opts.length) { newDraw(); continue; }
+    const o = opts[Math.floor(Math.random() * opts.length)];
+    S.team[o.slot] = { pid: o.p.id, era: S.draw.era, role: o.role };
+    S.sel = null; S.selRole = null;
+    if (S.team.every(Boolean)) { orderTail(); break; }
+    newDraw();
+  }
+  render(true);
+}
 function place(pid, slot, role) {
   if (pid == null) return;
   if (!placements(PLAYERS[pid], role).some(x => x.slot === slot)) return;
