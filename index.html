@@ -2067,6 +2067,8 @@ const FORMATS = {
 };
 // Game modes: "free" and "daily" are Tests, then "odi" / "odi-daily" and "t20" / "t20-daily".
 const fmtOf = mode => /^odi/.test(mode || "") ? "odi" : /^t20/.test(mode || "") ? "t20" : "test";
+// Free play switch. Off while friends test the game: only the three Dailies can be played. Set to true to bring free play back.
+const FREE_PLAY_ON = false;
 const isDaily = (m = S.mode) => m === "daily" || /-daily$/.test(m || "");
 const modeKey = (f, daily) => f === "test" ? (daily ? "daily" : "free") : f + (daily ? "-daily" : "");
 // Each format's Daily has its own leaderboard, kept apart in the one scores table by an offset on the day number.
@@ -2145,6 +2147,7 @@ function dailySeq(day) {
 // The inactive mode's game waits here, so switching modes never loses or resets a draft.
 let STASH = {};
 function switchMode(mode) {
+  if (!FREE_PLAY_ON && !isDaily(mode)) mode = modeKey(fmtOf(mode), true);
   if (S.mode === mode) return;
   if (!S.past) STASH[S.mode || "free"] = S;
   let next = STASH[mode];
@@ -3275,20 +3278,20 @@ function renderResults() {
       </div>
       <p class="verdict">${text}</p>
       ${isDaily() ? `<p class="emojis" aria-label="${r.wins} won, ${r.draws} ${isLO() ? "tied or no result" : "drawn"}, ${r.losses} lost">${emojiRow(r)}</p>
-      <p class="dailyline">That's your one go at ${dailyName()}. Share it, then try a free draft. Next daily in <b>${untilTomorrow()}</b>.</p>` : ""}
+      <p class="dailyline">That's your one go at ${dailyName()}. Share it, then ${FREE_PLAY_ON ? "try a free draft" : "try the other formats' Dailies up top"}. Next daily in <b>${untilTomorrow()}</b>.</p>` : ""}
       ${boardSection(r)}
       ${isDaily() ? pastDailyHtml() : ""}
       <div class="bars">${bar("Batting", r.batting)}${bar("Bowling", r.bowling)}</div>
       <textarea class="share" id="shareBox" readonly aria-label="Your result to share">${esc(share)}</textarea>
       <div class="actions">
-        ${isDaily() ? `<button class="btn solid" id="again" type="button">Free play</button>` : `<button class="btn solid" id="again" type="button">New draft</button>
+        ${isDaily() ? (FREE_PLAY_ON ? `<button class="btn solid" id="again" type="button">Free play</button>` : "") : `<button class="btn solid" id="again" type="button">New draft</button>
         <button class="btn" id="replay" type="button" ${(S.tour || 0) >= MAX_REPLAYS ? "disabled" : ""}>${(S.tour || 0) >= MAX_REPLAYS ? "No replays left" : `Replay the tour (${MAX_REPLAYS - (S.tour || 0)} left)`}</button>`}
         <button class="btn" id="card" type="button">Share card</button>
         <button class="btn" id="copy" type="button">Copy result</button>
         <span class="copied" id="copied" hidden>Copied</span>
       </div>
     </div>`;
-  $("again").onclick = () => { if (isDaily()) { switchMode(modeKey(FMT, false)); return; } S = fresh(S.mode); newDraw(); render(true); };
+  if ($("again")) $("again").onclick = () => { if (isDaily()) { switchMode(modeKey(FMT, false)); return; } S = fresh(S.mode); newDraw(); render(true); };
   if ($("replay")) $("replay").onclick = () => { if ((S.tour || 0) >= MAX_REPLAYS) return; S.tour = (S.tour || 0) + 1; render(); };
   renderTour(r);
   $("card").onclick = () => openCard(r);
@@ -3699,6 +3702,8 @@ function start(data) {
   // Yesterday's daily is finished with: start today's when the player next opens Daily.
   checkUnlockParam();
   if (isDaily() && S.day !== today().no && !S.past) { const back = modeKey(fmtOf(S.mode), false); STASH[S.mode] = null; S = STASH[back] || fresh(back); STASH[back] = null; }
+  if (!FREE_PLAY_ON && !isDaily()) { const d = modeKey(fmtOf(S.mode), true); STASH[S.mode] = S; S = STASH[d] && STASH[d].day === today().no ? STASH[d] : fresh(d); STASH[d] = null; }
+  $("modeFree").hidden = !FREE_PLAY_ON;
   setFormat(fmtOf(S.mode));
   if (!S.draw && !S.team.every(Boolean)) newDraw();
   $("modeDaily").onclick = () => switchMode(modeKey(FMT, true));
