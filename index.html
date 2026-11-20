@@ -3296,6 +3296,7 @@ function renderResults() {
   renderTour(r);
   $("card").onclick = () => openCard(r);
   wireBoard(r);
+  logResult(r);
   wirePastDaily();
   $("copy").onclick = () => {
     const show = () => { $("copied").hidden = false; };
@@ -3355,6 +3356,28 @@ function boardSection(r) {
       <input id="lbName" maxlength="20" autocomplete="nickname" value="${esc(saved)}" placeholder="e.g. Jarrod" required>
       <button class="btn solid" type="submit">Post my score</button><span class="lbmsg" id="lbMsg" role="status"></span></form>`}
     <div id="lbList">${boardHtml(boardDay())}</div></div>`;
+}
+// Every finished Daily is saved, match by match, to the project's daily_results table so the owner can see how
+// people got on, whether or not they post to the leaderboard. Anyone can add a row; nobody can read them back from the game.
+async function logResult(r) {
+  if (!LB_ON || !isDaily() || S.past) return;
+  const key = "txi-logged-" + FMT + "-" + S.day;
+  if (lsGet(key)) return;
+  lsSet(key, "pending");
+  const side = s => s === "us" ? "XI" : null;
+  const body = {
+    format: FMT, day: S.day, player_id: playerId(), name: lsGet("txi-name") || null,
+    rating: Math.round(r.rating * 10) / 10, wins: r.wins, draws: r.draws, losses: r.losses,
+    xi: S.team.map((t, i) => { const p = PLAYERS[t.pid]; return { no: i + 1, name: p.name, country: p.cc, decade: ERAS[t.era], role: t.role }; }),
+    matches: r.tests.map((t, i) => ({
+      n: i + 1, opponent: oppName(t.opp), venue: t.venue,
+      result: t.result.winner === "us" ? "W" : t.result.winner === "them" ? "L" : t.result.nr ? "NR" : t.result.tie ? "T" : "D",
+      summary: resultLine(t),
+      scores: t.inns.map(inn => `${side(inn.side) || t.opp.cc} ${inn.wkts === 10 ? inn.runs : inn.runs + "/" + inn.wkts}`).join(", "),
+    })),
+  };
+  try { await sb("daily_results", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(body) }); lsSet(key, "1"); }
+  catch (e) { if (e.status === 409) lsSet(key, "1"); else { try { localStorage.removeItem(key); } catch (x) {} } }
 }
 function wireBoard(r) {
   if (!LB_ON || !isDaily()) return;
@@ -3650,7 +3673,8 @@ function orderTail() {
   // An all-rounder picked as a bowler moves up by batting average, above the keeper if he averages more.
   // With two all-rounders in a white-ball side, the keeper joins the whole tail in that order, so he never ends up below a bowler who can't bat.
   const isAR = t => ["ARP", "ARS"].includes(PLAYERS[t.pid].role);
-  const group = S.team.map((t, i) => t.role === "WK" || (t.role === "BOWL" && (isAR(t) || isLO())) ? i : -1).filter(i => i >= 0);
+  // A keeper who opens or bats in the top five keeps his spot; the reshuffle is only for the lower order.
+  const group = S.team.map((t, i) => (t.role === "WK" && (!isLO() || i >= 5)) || (t.role === "BOWL" && (isAR(t) || isLO())) ? i : -1).filter(i => i >= 0);
   const ranked = group.map(i => S.team[i]).sort((a, b) => PLAYERS[b.pid].bat - PLAYERS[a.pid].bat);
   group.forEach((slot, k) => { S.team[slot] = ranked[k]; });
 }
